@@ -4,8 +4,8 @@
 import random
 random.seed()
 
-VALUES = range(13)
-RANKS = {9: 'J', 10: 'Q', 11: 'K', 12: 'A'}
+VALUES = range(2, 15)
+RANKS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}
 SUITS = [u'♠',u'♥',u'♦',u'♣']
 
 class Card:
@@ -14,8 +14,8 @@ class Card:
 		self.suit = suit
 
 	def _value_to_rank(self):
-		if self.value < 9:
-			return self.value + 2
+		if self.value < 11:
+			return self.value
 		else:
 			return RANKS[self.value]
 
@@ -28,6 +28,7 @@ class Deck:
 		for value in VALUES:
 			for suit in SUITS:
 				self.cards.add(Card(value, suit))
+
 	def draw(self, num_cards=1):
 		try:
 			cards = random.sample(self.cards, num_cards)
@@ -45,9 +46,17 @@ class Player:
 	def __init__(self, chips, name):
 		self.chips = chips
 		self.name = name
-		self.card_one, self.card_two = (None, None)
+		self.hand = [None, None]
 
 	def draw_hand(deck):
-		self.card_one = deck.draw()
-		self.card_two = deck.draw()
+		self.hand = deck.draw(2)
+
+class Round:
+	def __init__(self, players):
+		self.players = players
+		self.deck = Deck() 
+
+	
+	
+
 
