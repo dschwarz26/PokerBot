@@ -36,6 +36,7 @@ def compare_hands(common_cards, hands):
 	print ("Winners are: ")
 	for hand in winning_hands:
 		print hand
+	return winning_hands
 
 def get_winners(ranks_for_hands):
 	winning_hands = []
