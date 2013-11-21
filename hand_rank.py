@@ -10,9 +10,9 @@ class Rank:
 		      'straight', 'flush', 'full_house', 'quads', 'straight_flush']
 
 	def compare_ranks(self, rank):
-		if hand_names.index(self.name) > hand_names.index(rank.name):
+		if self.hand_names.index(self.name) > self.hand_names.index(rank.name):
 			return 1
-		if hand_names.index(self.name) < hand_names.index(rank.name):
+		if self.hand_names.index(self.name) < self.hand_names.index(rank.name):
 			return -1
 		if self.rank_one > rank.rank_one:
 			return 1
@@ -31,11 +31,12 @@ class Rank:
 def compare_hands(common_cards, hands):
 	ranks_for_hands = {}
 	for hand in hands:
-		ranks_for_hands[hand] = get_rank(hand.union(common_cards))
+		ranks_for_hands[hand] = get_rank(hand.read_as_list() + common_cards)
+		#ranks_for_hands[hand] = get_rank(hand.union(common_cards))
 	winning_hands = get_winners(ranks_for_hands)
 	print ("Winners are: ")
 	for hand in winning_hands:
-		print hand
+		print hand.read_out()
 	return winning_hands
 
 def get_winners(ranks_for_hands):

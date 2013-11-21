@@ -9,11 +9,11 @@ class Game:
 			self.players.append(classes.Player(stack_size, name))
 
 	def play_game(self):
-		dealer_position = 0
+		dealer_seat = 0
 		for _ in range(self.num_orbits):
-			round_ = classes.Round(self.players, dealer_position, 1, 2, debug_level=2)
+			round_ = classes.Round(self.players, dealer_seat, 1, 2, debug_level=1)
 			round_.play_round()
-			dealer_position = (dealer_position + 1) % len(self.players)
+			dealer_seat = (dealer_seat + 1) % len(self.players)
 
 	def display_player_stats(self):
 		print ("Hand %d" % self.round_number)
