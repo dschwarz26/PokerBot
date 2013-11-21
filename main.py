@@ -1,4 +1,5 @@
 import classes
+import deal
 
 class Game:
 	def __init__(self, player_names, stack_size, num_orbits=1):
@@ -11,8 +12,8 @@ class Game:
 	def play_game(self):
 		dealer_seat = 0
 		for _ in range(self.num_orbits):
-			round_ = classes.Round(self.players, dealer_seat, 1, 2, debug_level=1)
-			round_.play_round()
+			d = deal.Deal(self.players, dealer_seat, 1, 2, debug_level=1)
+			d.play_round()
 			dealer_seat = (dealer_seat + 1) % len(self.players)
 
 	def display_player_stats(self):
@@ -21,5 +22,6 @@ class Game:
 			print ("Player %s has %d chips." % (player.name, player.chips))
 		print ("-----------------------------")
 
-game = Game(['Alice', 'Bob', 'Charles'], 1000)
-game.play_game()
+if __name__ == '__main__':
+	game = Game(['Alice', 'Bob', 'Charles'], 1000)
+	game.play_game()
