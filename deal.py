@@ -1,6 +1,7 @@
 import classes
 import utils
 import random
+import hand_rank
 
 class Deal:
 	def __init__(self, players, small_blind, big_blind, dealer_seat=0, debug_level=0):
@@ -21,15 +22,17 @@ class Deal:
 
 	def get_next_active_seat(self, seat, require_active=False, num_seats=1):
 		result = seat
-		for _ in range(num_seats):
-			while True:
+		if num_seats > 1:
+			for _ in range(num_seats):
+				seat = self.get_next_active_seat(seat, require_active=require_active)
+			return seat	
+		for i in range(len(self.players)):
 				result = (result + 1) % len(self.players)
-				if result == seat:
-					break
-				if self.players[result].in_hand and (not require_active or not self.players[result].has_acted):
-					break
-	
-		return result
+				if (self.players[result].in_hand and
+				   (not require_active or not self.players[result].has_acted)):
+					return result
+		return seat
+
 	def initiate_round(self):
 		self.pot += self.big_blind + self.small_blind
 
@@ -102,10 +105,11 @@ class Deal:
 			if self.players[seat].in_hand:
 				hands[self.players[seat].hand] = self.players[seat]
 			seat = self.get_next_active_seat(seat, require_active=False)
-		winning_hands = hand_rank.compare_hands(self.communal_cards, hands.keys())
+		winning_hands = classes.hand_rank.compare_hands(self.communal_cards, hands.keys())
 		winners = []
 		for winning_hand in winning_hands:
 			winners.append(hands[winning_hand])
+		utils.out('Winners are: %s' % ', '.join([player.name for player in winners]), self.debug_level)
 		return winners
 
 	def clean_up(self, winners=None):

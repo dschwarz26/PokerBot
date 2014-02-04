@@ -34,9 +34,6 @@ def compare_hands(common_cards, hands):
 		ranks_for_hands[hand] = get_rank(hand.read_as_list() + common_cards)
 		#ranks_for_hands[hand] = get_rank(hand.union(common_cards))
 	winning_hands = get_winners(ranks_for_hands)
-	print ("Winners are: ")
-	for hand in winning_hands:
-		print hand.read_out()
 	return winning_hands
 
 def get_winners(ranks_for_hands):
