@@ -12,7 +12,7 @@ class Game:
 	def play_game(self):
 		dealer_seat = 0
 		for _ in range(self.num_orbits):
-			d = deal.Deal(self.players, dealer_seat, 1, 2, debug_level=1)
+			d = deal.Deal(self.players, dealer_seat=dealer_seat, debug_level=1)
 			d.play_round()
 			dealer_seat = (dealer_seat + 1) % len(self.players)
 
