@@ -16,6 +16,7 @@ class Deal:
 		self.small_blind = small_blind
 		self.big_blind = big_blind
 		self.pot = 0
+		self.curr_raise = 0
 		self.num_players_in_hand = len(self.players)
 		self.num_active_players_in_hand = self.num_players_in_hand
 		self.communal_cards = []
@@ -88,11 +89,13 @@ class Deal:
 		self.num_active_players_in_hand = self.num_players_in_hand
 		utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
 		seat_to_act = self.get_next_active_seat(self.dealer_seat)
-		self.play_all_actions(seat_to_act)
+		if self.play_all_actions(seat_to_act):
+			return
 		self.clean_up(winners=self.get_winners())
 	
 	def clean_up_betting_round(self):
 		self.bet = 0
+		self.curr_raise = 0
 		self.num_active_players_in_hand = self.num_players_in_hand
 		for player in self.players:
 			player.curr_bet = 0
@@ -144,20 +147,17 @@ class Deal:
 
 	#Currently picks a random action for each player.
 	def get_action(self, seat):
+		#to do: implement all-in tag
 		if self.bet == 0:
 			return ['check', 'bet'][random.randint(0, 1)]
 		if self.players[seat].curr_bet < self.bet:
-			return ['call', 'raise', 'fold'][random.randint(0, 2)]
+			if self.players[seat].chips <= self.bet - self.players[seat].curr_bet:
+				return ['call', 'fold'][random.randint(0, 1)]
+			else:
+				return ['call', 'raise', 'fold'][random.randint(0, 2)]
 		#Remaing case is that it's preflop and the big blind has option.
 		return ['check', 'raise'][random.randint(0, 1)]
 		
-	def update_betting_numbers(self, player, chips_bet):
-		player.has_acted = True
-		player.curr_bet += chips_bet
-		player.chips -= chips_bet
-		self.pot += chips_bet
-		return player
-
 	def set_all_other_players_active(self, seat):
 		seat_to_update = seat
 		self.num_active_players_in_hand = self.num_players_in_hand - 1
@@ -165,45 +165,68 @@ class Deal:
 			seat_to_update = self.get_next_active_seat(seat_to_update)
 	 		self.players[seat_to_update].has_acted = False
 
+	def update_player_with_check(self, player):
+		utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
+
+	def update_player_with_bet(self, player):
+		min_bet = self.big_blind
+		max_bet = player.chips
+		self.bet = random.randint(min_bet, max_bet)
+		player.curr_bet += self.bet
+		player.chips -= self.bet
+		self.pot += self.bet
+		utils.out("%s(%d) bets %d. Pot is %d" % (
+		player.name, player.chips, self.bet, self.pot), self.debug_level)
+
+	def update_player_with_call(self, player):
+		#Note: call_amount is 0 in the case that the big blind calls preflop.
+		amount_to_call = self.bet - player.curr_bet
+		player.curr_bet = self.bet
+		player.chips -= amount_to_call
+		self.pot += amount_to_call
+		utils.out("%s(%d) calls for %d. Pot is %d" % (
+			player.name, player.chips, amount_to_call, self.pot), self.debug_level)
+			
+	def update_player_with_raise(self, player):
+		amount_to_call = self.bet - player.curr_bet
+		max_raise_increase = player.chips - amount_to_call
+		min_raise_increase = self.curr_raise if self.curr_raise else self.bet
+		raise_increase = (random.randint(min_raise_increase, max_raise_increase)
+			if min_raise_increase < max_raise_increase
+			else max_raise_increase) 
+		player.chips -= amount_to_call + raise_increase
+		self.bet += raise_increase
+		player.curr_bet = self.bet
+		self.pot += amount_to_call + raise_increase
+		self.curr_raise += raise_increase
+		utils.out("%s(%d) raises to %d. Pot is %d" % (
+			player.name, player.chips, self.bet, self.pot), self.debug_level)
+
+	def update_player_with_fold(self, player):
+		player.in_hand = False
+		self.num_players_in_hand -= 1
+		utils.out('%s(%d) folds.' % (
+			player.name, player.chips), self.debug_level)
+			
 	def update_player_with_action(self, seat):
 		self.num_active_players_in_hand -= 1
 		player = self.players[seat]
 		action = self.get_action(seat)
+		player.has_acted = True
 		if action == 'check':
-			player.has_acted = True
-			utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
-			return player
+			self.update_player_with_check(player)
 		if action == 'bet':
-			self.bet = 2
-			self.update_betting_numbers(player, self.bet)
-			self.set_all_other_players_active(seat)
-			utils.out("%s(%d) bets %d. Pot is %d" % (
-				player.name, player.chips, self.bet, self.pot), self.debug_level)
-			return player
+			self.update_player_with_bet(player)
+			self.set_all_other_players_active(seat)	
 		if action == 'call':
-			#Note: call_amount is 0 in the case that the big blind calls preflop.
-			call_amount = self.bet - player.curr_bet
-			self.update_betting_numbers(player, call_amount)
-			player.has_acted = True
-			utils.out("%s(%d) calls for %d. Pot is %d" % (
-				player.name, player.chips, call_amount, self.pot), self.debug_level)
-			return player
+			self.update_player_with_call(player)
 		if action == 'raise':
-			#To do: error message for illegal raise amount
-			#To do: self.curr_raise is needed for raise bounds.
-			self.bet += 2
-			raise_amount = self.bet - player.curr_bet
-			self.update_betting_numbers(player, raise_amount)
-			#Every other player is now active in the hand.
+			self.update_player_with_raise(player)
 			self.set_all_other_players_active(seat)
-			utils.out("%s(%d) raises to %d. Pot is %d" % (
-				player.name, player.chips, self.bet, self.pot), self.debug_level)
-			return player
 		if action == 'fold':
-			player.in_hand = False
-			self.num_players_in_hand -= 1
+			self.update_player_with_fold(player)
+			#If the player who folded is the dealer, the next active player is the new dealer.
 			if seat == self.dealer_seat:
 				self.dealer_seat = self.get_next_active_seat(seat)
-			utils.out('%s(%d) folds.' % (
-				player.name, player.chips), self.debug_level)
-			return player
+		return player
+			
