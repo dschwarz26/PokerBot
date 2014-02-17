@@ -12,7 +12,7 @@ class Deal:
 			player.draw_hand(self.deck)
 			player.in_hand = True
 			player.curr_bet = 0
-		self.dealer_seat = dealer_seat
+		self.small_blind_seat = self.get_next_active_seat(dealer_seat)
 		self.small_blind = small_blind
 		self.big_blind = big_blind
 		self.pot = 0
@@ -21,6 +21,11 @@ class Deal:
 		self.num_active_players_in_hand = self.num_players_in_hand
 		self.communal_cards = []
 
+		utils.out('---------------------------------------', self.debug_level)
+		utils.out('%s(%d) is dealer.' % (self.players[dealer_seat].name, self.players[dealer_seat].chips),
+			self.debug_level)
+
+	
 	def get_next_active_seat(self, seat, require_active=False, num_seats=1):
 		result = seat
 		if num_seats > 1:
@@ -30,26 +35,30 @@ class Deal:
 		for i in range(len(self.players)):
 				result = (result + 1) % len(self.players)
 				if (self.players[result].in_hand and
-				   (not require_active or not self.players[result].has_acted)):
+				   (not require_active or 
+					(not self.players[result].has_acted and not self.players[result].all_in))):
 					return result
 		return seat
+		
+	def set_all_other_players_active(self, seat):
+		for _ in range(self.num_players_in_hand - 1):
+			seat = self.get_next_active_seat(seat)
+	 		if not self.players[seat].all_in and self.players[seat].has_acted:
+				self.players[seat].has_acted = False
+				self.num_active_players_in_hand += 1
+
 
 	def initiate_round(self):
 		self.pot = self.big_blind + self.small_blind
 		self.bet = self.big_blind
-
-		utils.out('%s(%d) is dealer.' % (self.players[self.dealer_seat].name, self.players[self.dealer_seat].chips),
-			self.debug_level)
-
-		small_blind_seat = self.get_next_active_seat(self.dealer_seat)
-		big_blind_seat = self.get_next_active_seat(small_blind_seat)
-
-		self.players[small_blind_seat].chips -= self.small_blind
-		self.players[small_blind_seat].curr_bet = self.small_blind
+		self.players[self.small_blind_seat].chips -= self.small_blind
+		self.players[self.small_blind_seat].curr_bet = self.small_blind
 		utils.out('%s(%d) posts small blind of %d.' % (
-			self.players[small_blind_seat].name, self.players[small_blind_seat].chips, self.small_blind),
+			self.players[self.small_blind_seat].name,
+			self.players[self.small_blind_seat].chips, self.small_blind),
 			self.debug_level)
 
+		big_blind_seat = self.get_next_active_seat(self.small_blind_seat)
 		self.players[big_blind_seat].chips -= self.big_blind
 		self.players[big_blind_seat].curr_bet = self.big_blind
 		utils.out('%s(%d) posts big blind of %d.' % (
@@ -62,48 +71,44 @@ class Deal:
 		#Preflop
 		for player in self.players:
 			utils.out("%s is dealt %s" % (player.name, player.hand.read_out()), self.debug_level)
-                seat_to_act = self.get_next_active_seat(self.dealer_seat, num_seats=3)
+                seat_to_act = self.get_next_active_seat(self.small_blind_seat, num_seats=2)
 		if self.play_all_actions(seat_to_act):
 			return                
 		self.clean_up_betting_round()
+		
 		#Flop
-		flop_cards = self.deck.draw(num_cards=3)
-		for card in flop_cards:
-			self.communal_cards.append(card)
+		self.communal_cards += self.deck.draw(num_cards=3)
 		utils.out("Flop: %s %s %s" % (self.communal_cards[0].read_out(), self.communal_cards[1].read_out(),
 			self.communal_cards[2].read_out()), self.debug_level)
-		seat_to_act = self.get_next_active_seat(self.dealer_seat)
-		if self.play_all_actions(seat_to_act):
+		if self.play_all_actions(self.small_blind_seat):
 			return
 		self.clean_up_betting_round()
+		
 		#Turn
-		self.communal_cards.append(self.deck.draw()[0])
-		self.num_active_players_in_hand = self.num_players_in_hand
+		self.communal_cards += self.deck.draw()
 		utils.out("Turn: %s" % self.communal_cards[3].read_out(), self.debug_level)
-		seat_to_act = self.get_next_active_seat(self.dealer_seat)
-		if self.play_all_actions(seat_to_act):
+		if self.play_all_actions(self.small_blind_seat):
 			return
 		self.clean_up_betting_round()
+
 		#River
-		self.communal_cards.append(self.deck.draw()[0])
-		self.num_active_players_in_hand = self.num_players_in_hand
+		self.communal_cards += self.deck.draw()
 		utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
-		seat_to_act = self.get_next_active_seat(self.dealer_seat)
-		if self.play_all_actions(seat_to_act):
+		if self.play_all_actions(self.small_blind_seat):
 			return
 		self.clean_up(winners=self.get_winners())
 	
 	def clean_up_betting_round(self):
-		self.bet = 0
-		self.curr_raise = 0
-		self.num_active_players_in_hand = self.num_players_in_hand
 		for player in self.players:
 			player.curr_bet = 0
 			player.has_acted = False
+		self.bet = 0
+		self.curr_raise = 0
+		self.num_active_players_in_hand = self.num_players_in_hand		
 
 	def get_winners(self):
 		hands = {}
-		seat = self.dealer_seat
+		seat = self.small_blind_seat
 		for _ in range(self.num_players_in_hand):
 			if self.players[seat].in_hand:
 				hands[self.players[seat].hand] = self.players[seat]
@@ -129,6 +134,20 @@ class Deal:
 			utils.out("%s(%d) wins the pot of %d" % (
 				winner.name, winner.chips, self.pot), self.debug_level)
 
+	def go_to_showdown(self):
+		num_cards = len(self.communal_cards)
+		self.communal_cards += self.deck.draw(num_cards = 5 - num_cards)
+		if not num_cards:
+			utils.out("Flop: %s %s %s" % (self.communal_cards[0].read_out(), self.communal_cards[1].read_out(),
+				self.communal_cards[2].read_out()), self.debug_level)
+			utils.out("Turn: %s" % self.communal_cards[3].read_out(), self.debug_level)
+			utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
+		elif num_cards == 3:
+			utils.out("Turn: %s" % self.communal_cards[3].read_out(), self.debug_level)
+			utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
+		elif num_cards == 4:	
+			utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
+		
 	#Loops through the players and plays their actions. If the hand ends during the loop, return
 	#True, otherwise return False.
 	def play_all_actions(self, seat_to_act):
@@ -143,6 +162,13 @@ class Deal:
 				return True
 			if self.num_active_players_in_hand > 0:
                 		seat_to_act = self.get_next_active_seat(seat_to_act)	
+
+		#If at least all but one player in the hand is all in, run the remaining
+		#communal cards and go to showdown.
+		if len([player for player in self.players if player.all_in]) >= self.num_players_in_hand - 1:
+			self.go_to_showdown()
+			self.clean_up(winners = self.get_winners())
+			return True
 		return False
 
 	#Currently picks a random action for each player.
@@ -157,21 +183,17 @@ class Deal:
 				return ['call', 'raise', 'fold'][random.randint(0, 2)]
 		#Remaing case is that it's preflop and the big blind has option.
 		return ['check', 'raise'][random.randint(0, 1)]
-		
-	def set_all_other_players_active(self, seat):
-		seat_to_update = seat
-		self.num_active_players_in_hand = self.num_players_in_hand - 1
-		for _ in range(self.num_active_players_in_hand):
-			seat_to_update = self.get_next_active_seat(seat_to_update)
-	 		self.players[seat_to_update].has_acted = False
 
 	def update_player_with_check(self, player):
 		utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
 
-	def update_player_with_bet(self, player):
-		min_bet = self.big_blind
-		max_bet = player.chips
-		self.bet = random.randint(min_bet, max_bet)
+	def update_player_with_bet(self, player, bet_size=None):
+		if bet_size:
+			self.bet = bet_size
+		else:
+			min_bet = self.big_blind
+			max_bet = player.chips
+			self.bet = random.randint(min_bet, max_bet)
 		player.curr_bet += self.bet
 		player.chips -= self.bet
 		self.pot += self.bet
@@ -187,13 +209,16 @@ class Deal:
 		utils.out("%s(%d) calls for %d. Pot is %d" % (
 			player.name, player.chips, amount_to_call, self.pot), self.debug_level)
 			
-	def update_player_with_raise(self, player):
+	def update_player_with_raise(self, player, raise_size=None):
 		amount_to_call = self.bet - player.curr_bet
-		max_raise_increase = player.chips - amount_to_call
-		min_raise_increase = self.curr_raise if self.curr_raise else self.bet
-		raise_increase = (random.randint(min_raise_increase, max_raise_increase)
-			if min_raise_increase < max_raise_increase
-			else max_raise_increase) 
+		if raise_size:
+			raise_increase = raise_size
+		else:
+			max_raise_increase = player.chips - amount_to_call
+			min_raise_increase = self.curr_raise if self.curr_raise else self.bet
+			raise_increase = (random.randint(min_raise_increase, max_raise_increase)
+				if min_raise_increase < max_raise_increase
+				else max_raise_increase) 
 		player.chips -= amount_to_call + raise_increase
 		self.bet += raise_increase
 		player.curr_bet = self.bet
@@ -223,10 +248,12 @@ class Deal:
 		if action == 'raise':
 			self.update_player_with_raise(player)
 			self.set_all_other_players_active(seat)
+		if player.chips == 0:
+			player.all_in = True
 		if action == 'fold':
 			self.update_player_with_fold(player)
-			#If the player who folded is the dealer, the next active player is the new dealer.
-			if seat == self.dealer_seat:
-				self.dealer_seat = self.get_next_active_seat(seat)
+			#If the player who folded is the first to act, the next active player is now first to act.
+			if seat == self.small_blind_seat:
+				self.small_blind_seat = self.get_next_active_seat(seat)
 		return player
 			
