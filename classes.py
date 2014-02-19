@@ -13,7 +13,10 @@ SUITS = [u'♠',u'♥',u'♦',u'♣']
 class Card:
 	def __init__(self, value, suit):
 		self.value = value
-		self.suit = suit
+		if suit in SUITS:
+			self.suit = suit
+		else:
+			self.suit = {'S': u'♠', 'H': u'♥', 'D': u'♦', "C": u'♣'}[suit]
 
 	def _value_to_rank(self):
 		if self.value < 11:

@@ -1,109 +1,77 @@
 import hand_rank
-import classes
+from classes import Card
 
 hands = [
 		["straight_flush", 8, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(6, classes.SUITS[0]), classes.Card(7, classes.SUITS[0]),
-		 classes.Card(8, classes.SUITS[0])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(6, 'S'), Card(7, 'S'), Card(8, 'S')]],
 
 		["straight", 8, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(6, classes.SUITS[1]), classes.Card(7, classes.SUITS[1]),
-		 classes.Card(8, classes.SUITS[1])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(6, 'H'), Card(7, 'H'), Card(8, 'H')]],
 
 		["flush", 9, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[0]), classes.Card(7, classes.SUITS[0]),
-		 classes.Card(8, classes.SUITS[0])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(9, 'S'), Card(7, 'S'), Card(8, 'S')]],
 
 		["high_card", 9, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[1]), classes.Card(7, classes.SUITS[2]),
-		 classes.Card(8, classes.SUITS[3])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(9, 'H'), Card(7, 'D'), Card(8, 'C')]],
 
 		["pair", 9, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[2]), classes.Card(9, classes.SUITS[1]),
-		 classes.Card(8, classes.SUITS[3])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(9, 'D'), Card(9, 'H'), Card(8, 'C')]],
 
 		["trips", 9, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[1]), classes.Card(9, classes.SUITS[2]),
-		 classes.Card(9, classes.SUITS[3])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(5, 'S'),
+		 Card(9, 'H'), Card(9, 'D'), Card(9, 'C')]],
 
 		["two_pair", 9, 8,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(8, classes.SUITS[1]),
-		 classes.Card(8, classes.SUITS[2]), classes.Card(9, classes.SUITS[3]),
-		 classes.Card(9, classes.SUITS[2])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'S'), Card(8, 'H'),
+		 Card(8, 'D'), Card(9, 'C'), Card(9, 'D')]],
 
 		["two_pair", 9, 8,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(2, classes.SUITS[1]),
-		 classes.Card(4, classes.SUITS[0]), classes.Card(8, classes.SUITS[2]),
-		 classes.Card(8, classes.SUITS[3]), classes.Card(9, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[3])]],
+		[Card(2, 'S'), Card(2, 'H'), Card(4, 'S'), Card(8, 'D'),
+		 Card(8, 'C'), Card(9, 'S'), Card(9, 'C')]],
 
 		["full_house", 9, 8,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(8, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[0]), classes.Card(8, classes.SUITS[1]),
-		 classes.Card(9, classes.SUITS[1]), classes.Card(8, classes.SUITS[2]),
-		 classes.Card(9, classes.SUITS[2])]],
+		[Card(2, 'S'), Card(8, 'S'), Card(9, 'S'), Card(8, 'H'),
+		 Card(9, 'H'), Card(8, 'D'), Card(9, 'D')]],
 
 		["straight", 5, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[1]), classes.Card(5, classes.SUITS[2]),
-		 classes.Card(14, classes.SUITS[1]), classes.Card(7, classes.SUITS[2]),
-		 classes.Card(8, classes.SUITS[0])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(4, 'H'), Card(5, 'D'),
+		 Card(14, 'H'), Card(7, 'D'), Card(8, 'S')]],
 
 		["straight", 6, None,
-		[classes.Card(2, classes.SUITS[3]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(4, classes.SUITS[3]), classes.Card(5, classes.SUITS[0]),
-		 classes.Card(6, classes.SUITS[0]), classes.Card(6, classes.SUITS[1]),
-		 classes.Card(6, classes.SUITS[2])]],
+		[Card(2, 'C'), Card(3, 'S'), Card(4, 'C'), Card(5, 'S'),
+		 Card(6, 'S'), Card(6, 'H'), Card(6, 'D')]],
 
 		["flush", 11, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(7, classes.SUITS[0]), classes.Card(9, classes.SUITS[0]),
-		 classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1]),
-		 classes.Card(11, classes.SUITS[2])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(7, 'S'), Card(9, 'S'),
+		 Card(11, 'S'), Card(11, 'H'), Card(11, 'D')]],
 		
 		["flush", 11, None,
-		[classes.Card(2, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(7, classes.SUITS[0]), classes.Card(9, classes.SUITS[0]),
-		 classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1]),
-		 classes.Card(11, classes.SUITS[2])]],
+		[Card(2, 'S'), Card(3, 'S'), Card(7, 'S'), Card(9, 'S'),
+		 Card(11, 'S'), Card(11, 'H'), Card(11, 'D')]],
 		
 		["full_house", 9, 10,
-		[classes.Card(9, classes.SUITS[0]), classes.Card(10, classes.SUITS[0]),
-		 classes.Card(9, classes.SUITS[1]), classes.Card(10, classes.SUITS[1]),
-		 classes.Card(9, classes.SUITS[2]), classes.Card(11, classes.SUITS[1]),
-		 classes.Card(12, classes.SUITS[2])]],
+		[Card(9, 'S'), Card(10, 'S'), Card(9, 'H'), Card(10, 'H'),
+		 Card(9, 'D'), Card(11, 'H'), Card(12, 'D')]],
 
 		["full_house", 9, 10,
-		[classes.Card(8, classes.SUITS[0]), classes.Card(9, classes.SUITS[0]),
-		 classes.Card(8, classes.SUITS[1]), classes.Card(9, classes.SUITS[1]),
-		 classes.Card(10, classes.SUITS[0]), classes.Card(9, classes.SUITS[2]),
-		 classes.Card(10, classes.SUITS[2])]],
+		[Card(8, 'S'), Card(9, 'S'), Card(8, 'H'), Card(9, 'H'),
+		 Card(10, 'S'), Card(9, 'D'), Card(10, 'D')]],
 
 		["quads", 14, None,
-		[classes.Card(14, classes.SUITS[0]), classes.Card(3, classes.SUITS[0]),
-		 classes.Card(14, classes.SUITS[1]), classes.Card(9, classes.SUITS[0]),
-		 classes.Card(14, classes.SUITS[2]), classes.Card(11, classes.SUITS[1]),
-		 classes.Card(14, classes.SUITS[3])]]
+		[Card(14, 'S'), Card(3, 'S'), Card(14, 'H'), Card(9, 'S'),
+		 Card(14, 'D'), Card(11, 'H'), Card(14, 'C')]]
 ]
 
 def test_get_rank():
 	for hand in hands:
 		expected_rank = hand_rank.Rank(hand[0], hand[1], hand[2])
 		actual_rank = hand_rank.get_rank(hand[3])
-		print ("Expected rank: " + expected_rank._to_string() + "   |   " +
-			"Actual rank: " + actual_rank._to_string())
+		assert(expected_rank._to_string() == actual_rank._to_string())
 
-test_get_rank()
+if __name__ == '__main__':
+	test_get_rank()

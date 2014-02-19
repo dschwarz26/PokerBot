@@ -1,16 +1,16 @@
 import deal
-import classes
+from classes import Card, Hand, Player
 import utils
 
 class TestDeal:
 	def __init__(self):
-		Alice = classes.Player(1000, 'Alice')
-		Bob = classes.Player(1000, 'Bob')
-		Carl = classes.Player(1000, 'Carl')
+		Alice = Player(1000, 'Alice')
+		Bob = Player(1000, 'Bob')
+		Carl = Player(1000, 'Carl')
 		self.default_players = [Alice, Bob, Carl]
 
 	def set_up_test(self, players, hands=None, communal_cards=None):
-		test_deal = deal.Deal(self.default_players, 1, 2, debug_level=1)
+		test_deal = deal.Deal(self.default_players, 1, 2, debug_level=0)
 		if hands:
 			for i, player in enumerate(test_deal.players):
 				player.hand = hands[i]
@@ -27,24 +27,17 @@ class TestDeal:
 		assert test_deal.get_next_active_seat(0) == 0
 
 	def test_get_winners(self):
-		communal_cards = [classes.Card(2, classes.SUITS[0]),
-				  classes.Card(3, classes.SUITS[0]),
-				  classes.Card(5, classes.SUITS[1]),
-				  classes.Card(7, classes.SUITS[2]),
-				  classes.Card(9, classes.SUITS[3])]
-		hands = [classes.Hand(classes.Card(10, classes.SUITS[0]), classes.Card(10, classes.SUITS[1])),
-			classes.Hand(classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1])),
-			classes.Hand(classes.Card(12, classes.SUITS[0]), classes.Card(12, classes.SUITS[1]))]
+		communal_cards = [Card(2, 'S'),	Card(3, 'S'), Card(5, 'H'), Card(7, 'D'), Card(9, 'C')]
+		hands = [Hand(Card(10, 'S'), Card(10, 'H')), Hand(Card(11, 'S'), Card(11, 'H')),
+			Hand(Card(12, 'S'), Card(12, 'H'))]
 		test_deal = self.set_up_test(self.default_players, hands=hands, communal_cards=communal_cards)
 		assert set([player.name for player in test_deal.get_winners()])  == set(['Carl'])
-		hands = [classes.Hand(classes.Card(10, classes.SUITS[0]), classes.Card(10, classes.SUITS[1])),
-			classes.Hand(classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1])),
-			classes.Hand(classes.Card(11, classes.SUITS[2]), classes.Card(11, classes.SUITS[1]))]
+		hands = [Hand(Card(10, 'S'), Card(10, 'H')), Hand(Card(11, 'S'), Card(11, 'H')),
+			Hand(Card(11, 'D'), Card(11, 'H'))]
 		test_deal = self.set_up_test(self.default_players, hands=hands, communal_cards=communal_cards)
 		assert set([player.name for player in test_deal.get_winners()]) == set(['Bob', 'Carl'])
-		hands = [classes.Hand(classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1])),
-			classes.Hand(classes.Card(11, classes.SUITS[0]), classes.Card(11, classes.SUITS[1])),
-			classes.Hand(classes.Card(11, classes.SUITS[2]), classes.Card(11, classes.SUITS[1]))]
+		hands = [Hand(Card(11, 'S'), Card(11, 'H')), Hand(Card(11, 'S'), Card(11, 'H')),
+			Hand(Card(11, 'D'), Card(11, 'H'))]
 		test_deal = self.set_up_test(self.default_players, hands=hands, communal_cards=communal_cards)
 		assert set([player.name for player in test_deal.get_winners()]) == set(['Alice', 'Bob', 'Carl'])
 		
