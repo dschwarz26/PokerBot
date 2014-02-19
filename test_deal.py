@@ -4,9 +4,10 @@ import utils
 
 class TestDeal:
 	def __init__(self):
-		Alice = Player(1000, 'Alice')
-		Bob = Player(1000, 'Bob')
-		Carl = Player(1000, 'Carl')
+		self.starting_chips = 1000
+		Alice = Player(self.starting_chips, 'Alice')
+		Bob = Player(self.starting_chips, 'Bob')
+		Carl = Player(self.starting_chips, 'Carl')
 		self.default_players = [Alice, Bob, Carl]
 
 	def set_up_test(self, players, hands=None, communal_cards=None):
@@ -26,6 +27,12 @@ class TestDeal:
 		test_deal.players[2].in_hand = False
 		assert test_deal.get_next_active_seat(0) == 0
 
+		test_deal = self.set_up_test(self.default_players)
+		test_deal.players[1].all_in = True
+		assert test_deal.get_next_active_seat(0) == 2
+		test_deal.players[2].all_in = True
+		assert test_deal.get_next_active_seat(0) == 0
+
 	def test_get_winners(self):
 		communal_cards = [Card(2, 'S'),	Card(3, 'S'), Card(5, 'H'), Card(7, 'D'), Card(9, 'C')]
 		hands = [Hand(Card(10, 'S'), Card(10, 'H')), Hand(Card(11, 'S'), Card(11, 'H')),
@@ -42,9 +49,83 @@ class TestDeal:
 		assert set([player.name for player in test_deal.get_winners()]) == set(['Alice', 'Bob', 'Carl'])
 		
 	def test_update_player_with_action(self):
-		#TO DO
-		pass
+		test_deal = self.set_up_test(self.default_players)
+		assert test_deal.players[test_deal.small_blind_seat].name == 'Bob'
+		test_deal.initiate_round()
+		assert test_deal.players[test_deal.small_blind_seat].chips == self.starting_chips - test_deal.small_blind
+		big_blind_seat = test_deal.get_next_active_seat(test_deal.small_blind_seat)
+		assert test_deal.players[big_blind_seat] == self.starting_chips - test_deal.big_blind
+		assert test_deal.pot == test_deal.small_blind + test_deal.big_blind
+		assert test_deal.bet == test_deal.big_blind
+		test_deal.update_player_with_action(0, ['fold'])
+		assert test_deal.num_players_in_hand == len(self.default_players) - 1
+		assert test_deal.pot == test_deal.small_blind + test_deal.big_blind
+		test_deal.updat_player_with_action(1, ['fold'])
+		assert test_deal.num_players_in_hand == len(self.default_players) - 2
+		test_deal.clean_up(winning_seat=2)
+		assert test_deal.players[2].chips == self.starting_chips + test_deal.small_blind
 
+		test_deal = self.set_up_test(self.default_players)
+		test_deal.initiate_round()
+		test_deal.update_player_with_action(0, ['call'])
+		assert test_deal.pot == test_deal.small_blind + 2 * test_deal.big_blind
+		assert test_deal.players[0].chips == self.starting_chips - test_deal.big_blind
+		assert test_deal.players[0].curr_bet == test_deal.big_blind
+		assert test_deal.num_active_players_in_hand == 2
+		test_deal.update_player_with_action(1, ['call'])
+		assert test_deal.pot == 3 * test_deal.big_blind
+		assert test_deal.players[1].chips == self.starting_chips - test_deal.big_blind
+		assert test_deal.players[1].curr_bet == test_deal.big_blind
+		assert test_deal.num_active_players_in_hand == 1
+		test_deal.update_player_with_action(2, ['check'])
+		assert test_deal.pot == 3 * test_deal.big_blind
+		assert test_deal.players[2].chips == self.starting_chips - test_deal.big_blind
+		assert test_deal.players[2].chips == test_deal.big_blind
+		assert test_deal.num_active_players_in_hand == 0
+		test_deal.clean_up_betting_round()
+		assert test_deal.bet == 0
+		test_deal.update_player_with_action(1, ['check'])
+		test_deal.update_player_with_action(2, ['check'])
+		test_deal.update_player_with_action(0, ['check'])
+		assert test_deal.pot == 3 * test_deal.big_blind
+		for player in test_deal.players:
+			assert player.has_acted
+			assert not player.all_in
+		assert test_deal.num_active_players_in_hand == 0
+		test_deal.clean_up_betting_round()
+		test_deal.update_player_with_action(1, ['bet', 10])
+		assert test_deal.players[1].chips == self.starting_chips - test_deal.big_blind - 10
+		assert test_deal.bet == 10
+		assert test_deal.pot == 10 + 3 * test_deal.big_blind
+		assert test_deal.num_active_players_in_hand == len(test_deal.players) - 1
+		test_deal.update_player_with_action(2, ['call'])
+		assert test_deal.players[2].chips == self.starting_chips - test_deal.big_blind - 10
+		assert test_deal.bet == 10
+		assert test_deal.pot == 20 + 3 * test_deal.big_blind
+		assert test_deal.num_active_players_in_hand == len(test_deal.players) - 2
+		test_deal.update_player_with_action(0, ['call'])
+		assert test_deal.num_active_players_in_hand == 0
+		test_deal.clean_up_betting_round()
+		assert test_deal.bet == 0
+		assert test_deal.pot == 30 + 3 * test_deal.big_blind
+		test_deal.update_player_with_action(1, ['check'])
+		test_deal.update_player_with_action(2, ['check'])
+		test_deal.update_player_with_action(0, ['bet', 100])
+		assert test_deal.num_active_players_in_hand == len(test_deal.players) - 1
+		assert test_deal.get_next_active_seat(2) == 0
+		assert test_deal.pot == 130 + 3 * test_deal.big_blind
+		test_deal.update_player_with_action(1, ['call'])
+		assert test_deal.num_active_players_in_hand == len(test_deal.players) - 2
+		assert test_deal.get_next_active_seat(0) == 1
+		assert test_deal.pot == 230 + 3 * test_deal.big_blind
+		test_deal.update_player_with_action(2, ['call'])
+		assert test_deal.num_active_players_in_hand == 0
+		assert test_deal.pot == 330 + 3 * test_deal.big_blind
+		test_deal.clean_up(winning_seat == 0)
+		assert test_deal.players[0].chips == self.starting_chips + 220 + 2 * test_deal.big_blind
+		assert test_deal.players[1].chips == self.starting_chips - 110 - test_deal.big_blind
+		assert test_deal.players[2].chips == self.starting_chips - 110 - test_deal.big_blind
+		
 if __name__ == '__main__':
 	testDeal = TestDeal()
 	testDeal.test_get_next_active_seat()

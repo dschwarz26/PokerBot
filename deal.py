@@ -152,7 +152,8 @@ class Deal:
 	#True, otherwise return False.
 	def play_all_actions(self, seat_to_act):
 		while self.num_active_players_in_hand > 0:
-                	self.players[seat_to_act] = self.update_player_with_action(seat_to_act)
+			action = self.get_action(seat_to_act)
+                	self.players[seat_to_act] = self.update_player_with_action(seat_to_act, action)
 			#If, after this player's action, there is only one remaining player in the
 			#hand, find that player and declare them the winner.
 			if self.num_players_in_hand == 1:
@@ -171,29 +172,54 @@ class Deal:
 			return True
 		return False
 
+	#Currently picks a random valid raise increase.
+	def get_raise_increase(self, seat):
+		amount_to_call = self.bet - self.players[seat].curr_bet
+		max_raise_increase = self.players[seat].chips - amount_to_call
+		min_raise_increase = self.curr_raise if self.curr_raise else self.bet
+		raise_increase = (random.randint(min_raise_increase, max_raise_increase)
+			if min_raise_increase < max_raise_increase
+			else max_raise_increase)
+		return raise_increase
+
+	#Currently picks a random valid bet size.
+	def get_bet(self, seat):
+		min_bet = self.big_blind
+		max_bet = self.players[seat].chips
+		bet = random.randint(min_bet, max_bet)
+		return bet	
+
 	#Currently picks a random action for each player.
 	def get_action(self, seat):
-		#to do: implement all-in tag
 		if self.bet == 0:
-			return ['check', 'bet'][random.randint(0, 1)]
-		if self.players[seat].curr_bet < self.bet:
-			if self.players[seat].chips <= self.bet - self.players[seat].curr_bet:
-				return ['call', 'fold'][random.randint(0, 1)]
+			action = ['check', 'bet'][random.randint(0, 1)]
+			if action == 'check':
+				return ['check']
 			else:
-				return ['call', 'raise', 'fold'][random.randint(0, 2)]
+				return ['bet', self.get_bet(seat)]
+		if self.players[seat].curr_bet < self.bet:
+			#If calling would put the player all in, they must either call or fold.
+			if self.players[seat].chips <= self.bet - self.players[seat].curr_bet:
+				return [['call', 'fold'][random.randint(0, 1)]]
+			else:
+				action = ['call', 'raise', 'fold'][random.randint(0, 2)]
+				if action in ['call', 'fold']:
+					return [action]
+				else:
+					return ['raise', self.get_raise_increase(seat)]
+	
 		#Remaing case is that it's preflop and the big blind has option.
-		return ['check', 'raise'][random.randint(0, 1)]
+		action = ['check', 'raise'][random.randint(0, 1)]
+		if action == 'check':
+			return ['check']
+		else:
+			return ['raise', self.get_raise_increase(seat)]
 
 	def update_player_with_check(self, player):
 		utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
 
-	def update_player_with_bet(self, player, bet_size=None):
-		if bet_size:
-			self.bet = bet_size
-		else:
-			min_bet = self.big_blind
-			max_bet = player.chips
-			self.bet = random.randint(min_bet, max_bet)
+	def update_player_with_bet(self, player, bet_size):
+		self.bet = bet_size
 		player.curr_bet += self.bet
 		player.chips -= self.bet
 		self.pot += self.bet
@@ -209,16 +235,8 @@ class Deal:
 		utils.out("%s(%d) calls for %d. Pot is %d" % (
 			player.name, player.chips, amount_to_call, self.pot), self.debug_level)
 			
-	def update_player_with_raise(self, player, raise_size=None):
+	def update_player_with_raise(self, player, raise_increase):
 		amount_to_call = self.bet - player.curr_bet
-		if raise_size:
-			raise_increase = raise_size
-		else:
-			max_raise_increase = player.chips - amount_to_call
-			min_raise_increase = self.curr_raise if self.curr_raise else self.bet
-			raise_increase = (random.randint(min_raise_increase, max_raise_increase)
-				if min_raise_increase < max_raise_increase
-				else max_raise_increase) 
 		player.chips -= amount_to_call + raise_increase
 		self.bet += raise_increase
 		player.curr_bet = self.bet
@@ -232,25 +250,26 @@ class Deal:
 		self.num_players_in_hand -= 1
 		utils.out('%s(%d) folds.' % (
 			player.name, player.chips), self.debug_level)
-			
-	def update_player_with_action(self, seat):
+	
+	#The action parameter stores as first index the name of the action, and as an optional
+	#second index the size of the bet or raise.
+	def update_player_with_action(self, seat, action):
 		self.num_active_players_in_hand -= 1
 		player = self.players[seat]
-		action = self.get_action(seat)
 		player.has_acted = True
-		if action == 'check':
+		if action[0] == 'check':
 			self.update_player_with_check(player)
-		if action == 'bet':
-			self.update_player_with_bet(player)
+		if action[0] == 'bet':
+			self.update_player_with_bet(player, action[1])
 			self.set_all_other_players_active(seat)	
-		if action == 'call':
+		if action[0] == 'call':
 			self.update_player_with_call(player)
-		if action == 'raise':
-			self.update_player_with_raise(player)
+		if action[0] == 'raise':
+			self.update_player_with_raise(player, action[1])
 			self.set_all_other_players_active(seat)
 		if player.chips == 0:
 			player.all_in = True
-		if action == 'fold':
+		if action[0] == 'fold':
 			self.update_player_with_fold(player)
 			#If the player who folded is the first to act, the next active player is now first to act.
 			if seat == self.small_blind_seat:
