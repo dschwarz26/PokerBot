@@ -12,6 +12,8 @@ class Deal:
 			player.draw_hand(self.deck)
 			player.in_hand = True
 			player.curr_bet = 0
+			player.all_in = False
+			player.has_acted = False
 		self.small_blind_seat = self.get_next_active_seat(dealer_seat)
 		self.small_blind = small_blind
 		self.big_blind = big_blind
@@ -26,7 +28,7 @@ class Deal:
 			self.debug_level)
 
 	
-	def get_next_active_seat(self, seat, require_active=False, num_seats=1):
+	def get_next_active_seat(self, seat, require_active=True, num_seats=1):
 		result = seat
 		if num_seats > 1:
 			for _ in range(num_seats):
@@ -42,7 +44,7 @@ class Deal:
 		
 	def set_all_other_players_active(self, seat):
 		for _ in range(self.num_players_in_hand - 1):
-			seat = self.get_next_active_seat(seat)
+			seat = self.get_next_active_seat(seat, require_active = False)
 	 		if not self.players[seat].all_in and self.players[seat].has_acted:
 				self.players[seat].has_acted = False
 				self.num_active_players_in_hand += 1
