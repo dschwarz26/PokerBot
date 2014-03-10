@@ -1,4 +1,4 @@
-import classes
+import players
 import deal
 
 class Game:
@@ -7,7 +7,7 @@ class Game:
 		self.players = []
 		self.num_orbits = num_orbits
 		for name in player_names:
-			self.players.append(classes.Player(stack_size, name))
+			self.players.append(players.RandomPlayer(stack_size, name))
 
 	def play_game(self):
 		dealer_seat = 0

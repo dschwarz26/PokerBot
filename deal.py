@@ -154,7 +154,7 @@ class Deal:
 	#True, otherwise return False.
 	def play_all_actions(self, seat_to_act):
 		while self.num_active_players_in_hand > 0:
-			action = self.get_action(seat_to_act)
+			action = self.players[seat_to_act].get_action(self)
                 	self.players[seat_to_act] = self.update_player_with_action(seat_to_act, action)
 			#If, after this player's action, there is only one remaining player in the
 			#hand, find that player and declare them the winner.
@@ -173,50 +173,7 @@ class Deal:
 			self.clean_up(winners = self.get_winners())
 			return True
 		return False
-
-	#Currently picks a random valid raise increase.
-	def get_raise_increase(self, seat):
-		amount_to_call = self.bet - self.players[seat].curr_bet
-		max_raise_increase = self.players[seat].chips - amount_to_call
-		min_raise_increase = self.curr_raise if self.curr_raise else self.bet
-		raise_increase = (random.randint(min_raise_increase, max_raise_increase)
-			if min_raise_increase < max_raise_increase
-			else max_raise_increase)
-		return raise_increase
-
-	#Currently picks a random valid bet size.
-	def get_bet(self, seat):
-		min_bet = self.big_blind
-		max_bet = self.players[seat].chips
-		bet = random.randint(min_bet, max_bet)
-		return bet	
-
-	#Currently picks a random action for each player.
-	def get_action(self, seat):
-		if self.bet == 0:
-			action = ['check', 'bet'][random.randint(0, 1)]
-			if action == 'check':
-				return ['check']
-			else:
-				return ['bet', self.get_bet(seat)]
-		if self.players[seat].curr_bet < self.bet:
-			#If calling would put the player all in, they must either call or fold.
-			if self.players[seat].chips <= self.bet - self.players[seat].curr_bet:
-				return [['call', 'fold'][random.randint(0, 1)]]
-			else:
-				action = ['call', 'raise', 'fold'][random.randint(0, 2)]
-				if action in ['call', 'fold']:
-					return [action]
-				else:
-					return ['raise', self.get_raise_increase(seat)]
 	
-		#Remaing case is that it's preflop and the big blind has option.
-		action = ['check', 'raise'][random.randint(0, 1)]
-		if action == 'check':
-			return ['check']
-		else:
-			return ['raise', self.get_raise_increase(seat)]
-
 	def update_player_with_check(self, player):
 		utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
 
