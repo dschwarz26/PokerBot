@@ -1,10 +1,9 @@
 import classes
 
 class Rank:
-	def __init__(self, name, rank_one, rank_two=None):
+	def __init__(self, name, rank_values):
 		self.name = name
-		self.rank_one = rank_one
-		self.rank_two = rank_two
+		self.rank_values = rank_values
 	
 	hand_names = ['high_card', 'pair', 'two_pair', 'trips',
 		      'straight', 'flush', 'full_house', 'quads', 'straight_flush']
@@ -14,25 +13,20 @@ class Rank:
 			return 1
 		if self.hand_names.index(self.name) < self.hand_names.index(rank.name):
 			return -1
-		if self.rank_one > rank.rank_one:
-			return 1
-		if self.rank_one < rank.rank_one:
-			return -1
-		if self.rank_two > rank.rank_two:
-			return 1
-		if self.rank_two < rank.rank_two:
-			return -1
+		for i, rank_value in enumerate(self.rank_values):
+			if rank_value > rank.rank_values[i]:
+				return 1
+			if rank_value < rank.rank_values[i]:
+				return -1
 		return 0
 
 	def _to_string(self):
-		return("%s %d %d" % (self.name, self.rank_one, self.rank_two) if self.rank_two else
-			"%s %d" % (self.name, self.rank_one))
+		return("%s %s" % (self.name, self.rank_values))
 
 def compare_hands(common_cards, hands):
 	ranks_for_hands = {}
 	for hand in hands:
 		ranks_for_hands[hand] = get_rank(hand.read_as_list() + common_cards)
-		#ranks_for_hands[hand] = get_rank(hand.union(common_cards))
 	winning_hands = get_winners(ranks_for_hands)
 	return winning_hands
 
@@ -82,78 +76,77 @@ def get_rank(cards):
 	return high_card
 	
 def get_rank_for_straight_flush(cards_by_suit, suit_with_max_number):
-	
-	if  len(cards_by_suit[suit_with_max_number]) < 5:
-		return None
-	num_in_straight = 0
-	for x in classes.VALUES[::-1]:
-		if x in cards_by_suit[suit_with_max_number]:
-			num_in_straight += 1
-			if num_in_straight == 5:
-				return Rank('straight_flush', x+4)
-			if x == 2 and num_in_straight == 4 and 14 in cards_by_suit[suit_with_max_number]:
-				return Rank('straight_flush', 5)
-		else:
-			num_in_straight = 0
-	return None
+	if len(cards_by_suit[suit_with_max_number]) >= 5:
+		counter = 0
+		for x in classes.VALUES[::-1]:
+			if x in cards_by_suit[suit_with_max_number]:
+				counter += 1
+				if counter  == 5:
+					return Rank('straight_flush', [x + 4])
+				#Special case for straight flush to the 5
+				if x == 2 and counter == 4 and 14 in cards_by_suit[suit_with_max_number]:
+					return Rank('straight_flush', [5])
+			else:
+				counter = 0
 	
 def get_rank_for_quads(cards_by_number):
-	for number in cards_by_number:
-		if cards_by_number[number] == 4:
-			return Rank('quads', number)
-	return None
+	for x in cards_by_number:
+		if cards_by_number[x] == 4:
+			kicker = max(y for y in cards_by_number.keys() if cards_by_number[y] == 1)
+			return Rank('quads', [x, kicker])
 	 		
 def get_rank_for_full_house(cards_by_number):
-	trips = [number for number in cards_by_number if cards_by_number[number] == 3]
-	if not trips:
-		return None
+	trips = [x for x in cards_by_number if cards_by_number[x] == 3]
 	if len(trips) == 2:
-		return Rank('full_house', sorted(trips)[1], sorted(trips)[0])
-	pairs = [number for number in cards_by_number if cards_by_number[number] == 2]
-	if not pairs:
-		return None
-	return Rank('full_house', trips[0], max(pairs)) 
+		return Rank('full_house', sorted(trips)[::-1])
+	if len(trips) == 1:
+		pairs = [x for x in cards_by_number if cards_by_number[x] == 2]
+		if pairs:
+			return Rank('full_house', [trips[0], max(pairs)])
 
 def get_rank_for_flush(cards_by_suit, suit_with_max_number):
 	if len(cards_by_suit[suit_with_max_number]) > 4:
-		return Rank('flush', max(cards_by_suit[suit_with_max_number]))
-	return None
+		return Rank('flush', sorted(cards_by_suit[suit_with_max_number])[::-1][:5])
 
 def get_rank_for_straight(cards_by_number):
 	if cards_by_number[10] == 0 and cards_by_number[5] == 0:
 		return None
 	counter = classes.VALUES[-1]
-	cards_by_number_with_low_ace = cards_by_number
-	cards_by_number_with_low_ace[1] = cards_by_number[14]
+	#Need to pop this key, value out of the dictionary after this method.
+	cards_by_number[1] = cards_by_number[14]
 	while True:
-		five_cards_from_counter = [cards_by_number_with_low_ace[counter - x] for x in range(5)]
+		five_cards_from_counter = [cards_by_number[counter - x] for x in range(5)]
 		if 0 not in five_cards_from_counter:
-			return Rank('straight', counter)
+			cards_by_number.pop(1)
+			return Rank('straight', [counter])
 		counter -= five_cards_from_counter.index(0) + 1
 		if counter < 5:
-			return None
+			cards_by_number.pop(1)
+			break
 
 def get_rank_for_trips(cards_by_number):
-	trips = [number for number in cards_by_number if cards_by_number[number] == 3]
-	if not trips:
-		return None
-	return Rank('trips', max(trips))
+	trips = [x for x in cards_by_number if cards_by_number[x] == 3]
+	if trips:
+		kickers = sorted([x for x in cards_by_number if cards_by_number[x] == 1])[::-1][:2]
+		return Rank('trips', trips + kickers)
 
 def get_rank_for_two_pair(cards_by_number):
-	pairs = [number for number in cards_by_number if cards_by_number[number] == 2]
-	if len(pairs) < 2:
-		return None
-	return Rank('two_pair', sorted(pairs)[-1], sorted(pairs)[-2])
+	pairs = [x for x in cards_by_number if cards_by_number[x] == 2]
+	if len(pairs) == 3:
+		return Rank('two_pair', sorted(pairs)[::-1])
+	if len(pairs) == 2:
+		kicker = max(x for x in cards_by_number if cards_by_number[x] == 1)
+		return Rank('two_pair', sorted(pairs)[::-1] + [kicker])
 
 def get_rank_for_pair(cards_by_number):
-	pairs = [number for number in cards_by_number if cards_by_number[number] == 2]
-	if not pairs:
-		return None
-	return Rank('pair', max(pairs))
+	pairs = [x for x in cards_by_number if cards_by_number[x] == 2]
+	if pairs:
+		kickers = sorted([x for x in cards_by_number if cards_by_number[x] == 1])[::-1][:3]
+		return Rank('pair', pairs + kickers)
 
 def get_rank_for_high_card(cards_by_number):
 	return Rank('high_card', 
-		max([number for number in cards_by_number if cards_by_number[number] > 0]))
+		sorted([x for x in cards_by_number if cards_by_number[x] > 0])[::-1][:5])
 
 def get_cards_by_suit(cards):
 	cards_by_suit = {key: [] for key in classes.SUITS}
