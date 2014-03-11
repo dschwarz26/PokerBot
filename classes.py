@@ -9,6 +9,10 @@ random.seed()
 VALUES = range(2, 15)
 SUITS = [u'♠',u'♥',u'♦',u'♣']
 
+def _to_value(val):
+	if val < 11:
+		return val
+	return {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}[val]
 
 class Card:
 	def __init__(self, value, suit):
@@ -18,14 +22,8 @@ class Card:
 		else:
 			self.suit = {'S': u'♠', 'H': u'♥', 'D': u'♦', "C": u'♣'}[suit]
 
-	def _value_to_rank(self):
-		if self.value < 11:
-			return self.value
-		else:
-			return {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}[self.value]
-
 	def read_out(self):
-		return '%s%s' % (self._value_to_rank(), unicode(self.suit))
+		return '%s%s' % (_to_value(self.value), unicode(self.suit))
 
 class Hand:
 	def __init__(self, card_one, card_two):
@@ -63,6 +61,7 @@ class Player:
 		self.chips = chips
 		self.name = name
 		self.hand = None
+		self.rank = None
 		self.has_acted = False
 		self.in_hand = False
 		self.all_in = False

@@ -109,16 +109,24 @@ class Deal:
 		self.num_active_players_in_hand = self.num_players_in_hand		
 
 	def get_winners(self):
-		hands = {}
+		ranks = []
 		seat = self.small_blind_seat
 		for _ in range(self.num_players_in_hand):
 			if self.players[seat].in_hand:
-				hands[self.players[seat].hand] = self.players[seat]
-			seat = self.get_next_active_seat(seat, require_active=False)
-		winning_hands = classes.hand_rank.compare_hands(self.communal_cards, hands.keys())
+				self.players[seat].rank = classes.hand_rank.get_rank(
+					self.players[seat].hand.read_as_list() + self.communal_cards)
+				ranks.append(self.players[seat].rank)
+				utils.out('%s(%s) has %s' % (self.players[seat].name,
+					self.players[seat].hand.read_out(), self.players[seat].rank._to_string()), self.debug_level)
+			seat = self.get_next_active_seat(seat, require_active = False)
+		winning_rank = classes.hand_rank.get_winning_rank(ranks)
 		winners = []
-		for winning_hand in winning_hands:
-			winners.append(hands[winning_hand])
+		seat = self.small_blind_seat
+		for _ in range(self.num_players_in_hand):
+			if self.players[seat].in_hand:
+				if self.players[seat].rank.equals(winning_rank):
+					winners.append(self.players[seat])
+			seat = self.get_next_active_seat(seat, require_active = False)
 		utils.out('Winners are: %s' % ', '.join([player.name for player in winners]), self.debug_level)
 		return winners
 

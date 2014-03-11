@@ -8,40 +8,69 @@ class Rank:
 	hand_names = ['high_card', 'pair', 'two_pair', 'trips',
 		      'straight', 'flush', 'full_house', 'quads', 'straight_flush']
 
-	def compare_ranks(self, rank):
-		if self.hand_names.index(self.name) > self.hand_names.index(rank.name):
+	# is this __equals__ ?
+	def equals(self, other):
+		return self.name == other.name and self.rank_values == other.rank_values
+
+	def compare_ranks(self, other):
+		if self.hand_names.index(self.name) > self.hand_names.index(other.name):
 			return 1
-		if self.hand_names.index(self.name) < self.hand_names.index(rank.name):
+		if self.hand_names.index(self.name) < self.hand_names.index(other.name):
 			return -1
-		for i, rank_value in enumerate(self.rank_values):
-			if rank_value > rank.rank_values[i]:
+		assert type(self.rank_values) == list and type(other.rank_values) == list, '%s %s' % (
+			self.rank_values, other.rank_values)
+		for i in range(len(self.rank_values)):
+			if self.rank_values[i] > other.rank_values[i]:
 				return 1
-			if rank_value < rank.rank_values[i]:
+			if self.rank_values[i] < other.rank_values[i]:
 				return -1
 		return 0
 
 	def _to_string(self):
-		return("%s %s" % (self.name, self.rank_values))
+		if self.name == 'straight_flush':
+			return ('a straight flush, %d high' % classes._to_value(self.rank_values[0]))
+		if self.name == 'quads':
+			return ('four of a kind, %ss, %s kicker' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1])))
+		if self.name == 'full_house':
+			return ('a full house, %ss over %ss' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1])))
+		if self.name == 'flush':
+			return ('a flush, %s high' % classes._to_value(self.rank_values[0]))
+		if self.name == 'straight':
+			return ('a straight, %s high' % classes._to_value(self.rank_values[0]))
+		if self.name == 'trips':
+			return ('three of a kind, %ss, %s %s kicker' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1]),
+				classes._to_value(self.rank_values[2])))
+		if self.name == 'two_pair':
+			return ('two pair, %ss and %ss, %s kicker' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1]),
+				classes._to_value(self.rank_values[2])))
+		if self.name == 'pair':
+			return ('a pair of %ss, %s %s %s kicker' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1]),
+				classes._to_value(self.rank_values[2]),
+				classes._to_value(self.rank_values[3])))
+		return ('high card %s, %s %s %s %s kicker' % (
+				classes._to_value(self.rank_values[0]),
+				classes._to_value(self.rank_values[1]),
+				classes._to_value(self.rank_values[2]),
+				classes._to_value(self.rank_values[3]),
+				classes._to_value(self.rank_values[4]))) 
 
-def compare_hands(common_cards, hands):
-	ranks_for_hands = {}
-	for hand in hands:
-		ranks_for_hands[hand] = get_rank(hand.read_as_list() + common_cards)
-	winning_hands = get_winners(ranks_for_hands)
-	return winning_hands
-
-def get_winners(ranks_for_hands):
-	winning_hands = []
+def get_winning_rank(ranks):
 	winning_rank = Rank('high_card', 7)
-	for hand in ranks_for_hands.iterkeys():
-		rank = ranks_for_hands[hand]
+	for rank in ranks:
 		comparison = rank.compare_ranks(winning_rank)	
 		if comparison == 1:
 			winning_rank = rank
-			winning_hands = [hand]
-		elif comparison == 0:
-			winning_hands.append(hand)
-	return winning_hands
+	return winning_rank
 
 def get_rank(cards):
 	cards_by_number = get_cards_by_number(cards)
