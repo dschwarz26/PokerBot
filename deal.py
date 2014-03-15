@@ -14,7 +14,7 @@ class Deal:
 			player.curr_bet = 0
 			player.all_in = False
 			player.has_acted = False
-		self.small_blind_seat = self.get_next_active_seat(dealer_seat)
+		self.small_blind_seat = self.get_next_seat(dealer_seat)
 		self.small_blind = small_blind
 		self.big_blind = big_blind
 		self.pot = 0
@@ -26,13 +26,12 @@ class Deal:
 		utils.out('---------------------------------------', self.debug_level)
 		utils.out('%s(%d) is dealer.' % (self.players[dealer_seat].name, self.players[dealer_seat].chips),
 			self.debug_level)
-
 	
-	def get_next_active_seat(self, seat, require_active=True, num_seats=1):
+	def get_next_seat(self, seat, require_active=True, num_seats=1):
 		result = seat
 		if num_seats > 1:
 			for _ in range(num_seats):
-				seat = self.get_next_active_seat(seat, require_active=require_active)
+				seat = self.get_next_seat(seat, require_active=require_active)
 			return seat	
 		for i in range(len(self.players)):
 				result = (result + 1) % len(self.players)
@@ -44,7 +43,7 @@ class Deal:
 		
 	def set_all_other_players_active(self, seat):
 		for _ in range(self.num_players_in_hand - 1):
-			seat = self.get_next_active_seat(seat, require_active = False)
+			seat = self.get_next_seat(seat, require_active = False)
 	 		if not self.players[seat].all_in and self.players[seat].has_acted:
 				self.players[seat].has_acted = False
 				self.num_active_players_in_hand += 1
@@ -60,7 +59,7 @@ class Deal:
 			self.players[self.small_blind_seat].chips, self.small_blind),
 			self.debug_level)
 
-		big_blind_seat = self.get_next_active_seat(self.small_blind_seat)
+		big_blind_seat = self.get_next_seat(self.small_blind_seat)
 		self.players[big_blind_seat].chips -= self.big_blind
 		self.players[big_blind_seat].curr_bet = self.big_blind
 		utils.out('%s(%d) posts big blind of %d.' % (
@@ -73,7 +72,7 @@ class Deal:
 		#Preflop
 		for player in self.players:
 			utils.out("%s is dealt %s" % (player.name, player.hand.read_out()), self.debug_level)
-                seat_to_act = self.get_next_active_seat(self.small_blind_seat, num_seats=2)
+                seat_to_act = self.get_next_seat(self.small_blind_seat, num_seats=2)
 		if self.play_all_actions(seat_to_act):
 			return                
 		self.clean_up_betting_round()
@@ -119,7 +118,7 @@ class Deal:
 				ranks.append(self.players[seat].rank)
 				utils.out('%s(%s) has %s' % (self.players[seat].name,
 					self.players[seat].hand.read_out(), self.players[seat].rank._to_string()), self.debug_level)
-			seat = self.get_next_active_seat(seat, require_active = False)
+			seat = self.get_next_seat(seat, require_active = False)
 		winning_rank = classes.hand_rank.get_winning_rank(ranks)
 		winners = []
 		seat = self.small_blind_seat
@@ -127,7 +126,7 @@ class Deal:
 			if self.players[seat].in_hand:
 				if self.players[seat].rank.equals(winning_rank):
 					winners.append(self.players[seat])
-			seat = self.get_next_active_seat(seat, require_active = False)
+			seat = self.get_next_seat(seat, require_active = False)
 		utils.out('Winners are: %s' % ', '.join([player.name for player in winners]), self.debug_level)
 		return winners
 
@@ -173,7 +172,7 @@ class Deal:
 						self.clean_up(winning_seat = i)
 				return True
 			if self.num_active_players_in_hand > 0:
-                		seat_to_act = self.get_next_active_seat(seat_to_act)	
+                		seat_to_act = self.get_next_seat(seat_to_act)	
 
 		#If at least all but one player in the hand is all in, run the remaining
 		#communal cards and go to showdown.
@@ -241,6 +240,6 @@ class Deal:
 			self.update_player_with_fold(player)
 			#If the player who folded is the first to act, the next active player is now first to act.
 			if seat == self.small_blind_seat:
-				self.small_blind_seat = self.get_next_active_seat(seat)
+				self.small_blind_seat = self.get_next_seat(seat)
 		return player
 			
