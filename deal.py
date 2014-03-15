@@ -1,13 +1,12 @@
-import classes
+from classes import Deck
 import utils
-import random
 import hand_rank
 
 class Deal:
 	def __init__(self, players, small_blind=1, big_blind=2, dealer_seat=0, debug_level=0):
 		self.debug_level = debug_level	
 		self.players = players
-		self.deck = classes.Deck()
+		self.deck = Deck()
 		for player in self.players:
 			player.draw_hand(self.deck)
 			player.in_hand = True
@@ -107,43 +106,45 @@ class Deal:
 		self.curr_raise = 0
 		self.num_active_players_in_hand = self.num_players_in_hand		
 
-	def get_winners(self):
+	def get_players_by_rank(self):
 		#TO DO: make a method for iterating through the players
-		ranks = []
+		players_in_hand = []
 		seat = self.small_blind_seat
 		for _ in range(self.num_players_in_hand):
 			if self.players[seat].in_hand:
-				self.players[seat].rank = classes.hand_rank.get_rank(
+				players_in_hand.append(self.players[seat])
+				self.players[seat].rank = hand_rank.get_rank(
 					self.players[seat].hand.read_as_list() + self.communal_cards)
-				ranks.append(self.players[seat].rank)
 				utils.out('%s(%s) has %s' % (self.players[seat].name,
 					self.players[seat].hand.read_out(), self.players[seat].rank._to_string()), self.debug_level)
 			seat = self.get_next_seat(seat, require_active = False)
-		winning_rank = classes.hand_rank.get_winning_rank(ranks)
-		winners = []
-		seat = self.small_blind_seat
-		for _ in range(self.num_players_in_hand):
-			if self.players[seat].in_hand:
-				if self.players[seat].rank.equals(winning_rank):
-					winners.append(self.players[seat])
-			seat = self.get_next_seat(seat, require_active = False)
-		utils.out('Winners are: %s' % ', '.join([player.name for player in winners]), self.debug_level)
-		return winners
+		
+		players_by_rank = sorted(players_in_hand, key = lambda x: x.rank, cmp = hand_rank.Rank.compare_ranks)
+		return players_by_rank
 
 	# If the hand went to showdown, show the winning cards and pay out the pot. If
 	# not, the pot goes to the last remaining player in the hand.
-	def clean_up(self, winners=None, winning_seat=None):
-		if winners:
-			for winner in winners:
-				winner.chips += self.pot / len(winners)
-				utils.out("%s(%d) wins the pot of %d split %d ways with %s" % (
-					winner.name, winner.chips, self.pot, len(winners), winner.hand.read_out()), self.debug_level)
-		else:
+	def clean_up(self, players_by_rank=None, winning_seat=None):
+		#Hand did not go to showdown
+		#winning_seat may be 0
+		if winning_seat is not None:
 			winner = self.players[winning_seat]
 			winner.chips += self.pot
 			utils.out("%s(%d) wins the pot of %d" % (
 				winner.name, winner.chips, self.pot), self.debug_level)
-
+		#Hand went to showdown
+		else:
+			while self.pot > 0:
+				winner = players_by_rank.pop()
+				if winner.sidepot:
+					winnings = winner.sidepot
+				else:
+					winnings = self.pot
+				self.pot -= winnings
+				winner.chips += winnings
+				utils.out("%s(%d) wins %d chips with %s" % (
+					winner.name, winner.chips, winnings, winner.hand.read_out()), self.debug_level)
+	
 	def go_to_showdown(self):
 		num_cards = len(self.communal_cards)
 		self.communal_cards += self.deck.draw(num_cards = 5 - num_cards)
@@ -173,12 +174,15 @@ class Deal:
 				return True
 			if self.num_active_players_in_hand > 0:
                 		seat_to_act = self.get_next_seat(seat_to_act)	
-
+		for player in self.players:
+			if player.in_hand:
+				if player.all_in and not player.sidepot:
+					self.update_player_with_sidepot(player)
 		#If at least all but one player in the hand is all in, run the remaining
 		#communal cards and go to showdown.
 		if len([player for player in self.players if player.all_in]) >= self.num_players_in_hand - 1:
 			self.go_to_showdown()
-			self.clean_up(winners = self.get_winners())
+			self.clean_up(players_by_rank = self.get_players_by_rank())
 			return True
 		return False
 	
@@ -196,9 +200,15 @@ class Deal:
 	def update_player_with_call(self, player):
 		#Note: call_amount is 0 in the case that the big blind calls preflop.
 		amount_to_call = self.bet - player.curr_bet
-		player.curr_bet = self.bet
-		player.chips -= amount_to_call
-		self.pot += amount_to_call
+		#Check if player is all-in
+		if amount_to_call > player.chips:
+			player.curr_bet += player.chips
+			player.chips = 0
+			self.pot += player.chips
+		else:
+			player.curr_bet = self.bet
+			player.chips -= amount_to_call
+			self.pot += amount_to_call
 		utils.out("%s(%d) calls for %d. Pot is %d" % (
 			player.name, player.chips, amount_to_call, self.pot), self.debug_level)
 			
@@ -218,6 +228,21 @@ class Deal:
 		utils.out('%s(%d) folds.' % (
 			player.name, player.chips), self.debug_level)
 	
+	#Calculates the sidepot for a player as follows. For each other player in the hand,
+	#add chips equal to the player's all-in bet, or add chips based on the other player's
+	#all-in bet, whichever is lower.
+	def update_player_with_sidepot(self, player):
+		player.sidepot = player.curr_bet
+		for curr_player in self.players:
+			#To do: players cannot have the same name
+			if curr_player.name != player.name:
+				if curr_player.curr_bet < player.curr_bet:
+					player.sidepot += curr_player.curr_bet
+				else:
+					player.sidepot += player.curr_bet
+		utils.out('%s has a sidepot of %d' % (player.name, player.sidepot), self.debug_level)
+		return player
+
 	#The action parameter stores as first index the name of the action, and as an optional
 	#second index the size of the bet or raise.
 	def update_player_with_action(self, seat, action):
@@ -240,6 +265,6 @@ class Deal:
 			self.update_player_with_fold(player)
 			#If the player who folded is the first to act, the next active player is now first to act.
 			if seat == self.small_blind_seat:
-				self.small_blind_seat = self.get_next_seat(seat)
+				self.small_blind_seat = self.get_next_seat(seat, require_active = False)
 		return player
 			

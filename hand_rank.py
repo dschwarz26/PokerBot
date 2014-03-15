@@ -18,8 +18,8 @@ class Rank:
 			return 1
 		if self.hand_names.index(self.name) < self.hand_names.index(other.name):
 			return -1
-		assert type(self.rank_values) == list and type(other.rank_values) == list, '%s %s' % (
-			self.rank_values, other.rank_values)
+		assert type(self.rank_values) == list and type(other.rank_values) == list, '%s %s %s %s' % (
+			self.name, self.rank_values, other.name, other.rank_values)
 		for i in range(len(self.rank_values)):
 			if self.rank_values[i] > other.rank_values[i]:
 				return 1
@@ -65,13 +65,8 @@ class Rank:
 				classes._to_value(self.rank_values[3]),
 				classes._to_value(self.rank_values[4]))) 
 
-def get_winning_rank(ranks):
-	winning_rank = Rank('high_card', 7)
-	for rank in ranks:
-		comparison = rank.compare_ranks(winning_rank)	
-		if comparison == 1:
-			winning_rank = rank
-	return winning_rank
+def order_ranks(ranks):
+	return sorted(ranks, cmp = compare_ranks)
 
 def get_rank(cards):
 	cards_by_number = get_cards_by_number(cards)

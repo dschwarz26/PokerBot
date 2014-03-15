@@ -66,6 +66,7 @@ class Player:
 		self.in_hand = False
 		self.all_in = False
 		self.curr_bet = 0
+		self.sidepot = None
 
 	def draw_hand(self, deck):
 		cards = deck.draw(2)

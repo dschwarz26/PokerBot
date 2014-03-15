@@ -29,7 +29,6 @@ class Game:
 		utils.out('Hand %d' % self.round_number, self.debug_level)
 		for player in self.players:
 			utils.out('Player %s has %d chips.' % (player.name, player.chips), self.debug_level)
-		utils.out('-----------------------------', self.debug_level)
 
 if __name__ == '__main__':
 	people = [

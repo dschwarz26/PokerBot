@@ -1,4 +1,6 @@
+import unittest
 import hand_rank
+
 from classes import Card
 
 hands = [
@@ -273,12 +275,9 @@ hands = [
 		}
 ]
 
-def test_get_rank():
-	for hand in hands:
-		expected_rank = hand_rank.Rank(hand['expected']['name'], hand['expected']['rank_values'])
-		actual_rank = hand_rank.get_rank(hand['cards'])
-		assert expected_rank._to_string() == actual_rank._to_string(), \
-			'expected: %s, actual: %s' % (expected_rank._to_string(), actual_rank._to_string())
-
-if __name__ == '__main__':
-	test_get_rank()
+class RankTest(unittest.TestCase):
+	def test_get_rank(self):
+		for hand in hands:
+			expected_rank = hand_rank.Rank(hand['expected']['name'], hand['expected']['rank_values'])
+			actual_rank = hand_rank.get_rank(hand['cards'])
+			self.assertEquals(expected_rank._to_string(), actual_rank._to_string())
