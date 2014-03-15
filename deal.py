@@ -109,6 +109,7 @@ class Deal:
 		self.num_active_players_in_hand = self.num_players_in_hand		
 
 	def get_winners(self):
+		#TO DO: make a method for iterating through the players
 		ranks = []
 		seat = self.small_blind_seat
 		for _ in range(self.num_players_in_hand):

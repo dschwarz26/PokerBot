@@ -1,4 +1,5 @@
 import classes
+import utils
 
 class Rank:
 	def __init__(self, name, rank_values):
@@ -28,7 +29,7 @@ class Rank:
 
 	def _to_string(self):
 		if self.name == 'straight_flush':
-			return ('a straight flush, %d high' % classes._to_value(self.rank_values[0]))
+			return ('a straight flush, %s high' % classes._to_value(self.rank_values[0]))
 		if self.name == 'quads':
 			return ('four of a kind, %ss, %s kicker' % (
 				classes._to_value(self.rank_values[0]),
