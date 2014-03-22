@@ -104,7 +104,8 @@ class Deal:
 			player.has_acted = False
 		self.bet = 0
 		self.curr_raise = 0
-		self.num_active_players_in_hand = self.num_players_in_hand		
+		self.num_active_players_in_hand = len(
+			[player for player in self.players if player.in_hand and not player.all_in])
 
 	def get_players_by_rank(self):
 		#TO DO: make a method for iterating through the players
@@ -135,13 +136,18 @@ class Deal:
 		#Hand went to showdown
 		else:
 			while self.pot > 0:
+				#To do: handle ties
 				winner = players_by_rank.pop()
-				if winner.sidepot:
-					winnings = winner.sidepot
-				else:
-					winnings = self.pot
+				winnings = winner.sidepot if winner.sidepot else self.pot
 				self.pot -= winnings
 				winner.chips += winnings
+				#Remove this sidepot value from other players' sidepots
+				for player in self.players:
+					if player.in_hand:
+						if player.sidepot:
+							player.sidepot -= winnings
+							if player.sidepot < 0:
+								player.sidepot = 0
 				utils.out("%s(%d) wins %d chips with %s" % (
 					winner.name, winner.chips, winnings, winner.hand.read_out()), self.debug_level)
 	
@@ -229,10 +235,12 @@ class Deal:
 			player.name, player.chips), self.debug_level)
 	
 	#Calculates the sidepot for a player as follows. For each other player in the hand,
-	#add chips equal to the player's all-in bet, or add chips based on the other player's
-	#all-in bet, whichever is lower.
+	#add chips equal to that player's bet, or the given player's bet, whichever is
+	#smaller. Then add the pot before the round started.
 	def update_player_with_sidepot(self, player):
-		player.sidepot = player.curr_bet
+		bets_this_round = sum(player.curr_bet for player in self.players if player.in_hand)
+		pot_before_bet = self.pot - bets_this_round
+		player.sidepot = pot_before_bet + player.curr_bet
 		for curr_player in self.players:
 			#To do: players cannot have the same name
 			if curr_player.name != player.name:
