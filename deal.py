@@ -7,21 +7,14 @@ class Deal:
 		self.debug_level = debug_level	
 		self.players = players
 		self.deck = Deck()
-		for player in self.players:
-			player.draw_hand(self.deck)
-			player.in_hand = True
-			player.curr_bet = 0
-			player.all_in = False
-			player.has_acted = False
-		self.small_blind_seat = self.get_next_seat(dealer_seat)
 		self.small_blind = small_blind
 		self.big_blind = big_blind
+		self.small_blind_seat = self.get_next_seat(dealer_seat)
 		self.pot = 0
 		self.curr_raise = 0
 		self.num_players_in_hand = len(self.players)
 		self.num_active_players_in_hand = self.num_players_in_hand
 		self.communal_cards = []
-
 		utils.out('---------------------------------------', self.debug_level)
 		utils.out('%s(%d) is dealer.' % (self.players[dealer_seat].name, self.players[dealer_seat].chips),
 			self.debug_level)
@@ -33,11 +26,11 @@ class Deal:
 				seat = self.get_next_seat(seat, require_active=require_active)
 			return seat	
 		for i in range(len(self.players)):
-				result = (result + 1) % len(self.players)
-				if (self.players[result].in_hand and
-				   (not require_active or 
-					(not self.players[result].has_acted and not self.players[result].all_in))):
-					return result
+			result = (result + 1) % len(self.players)
+			if (self.players[result].in_hand and
+			   (not require_active or 
+				(not self.players[result].has_acted and not self.players[result].all_in))):
+				return result
 		return seat
 		
 	def set_all_other_players_active(self, seat):
@@ -47,10 +40,18 @@ class Deal:
 				self.players[seat].has_acted = False
 				self.num_active_players_in_hand += 1
 
-
+	#Initiates round by setting player variables and collecting the small and big blinds.
 	def initiate_round(self):
+		for player in self.players:
+			player.draw_hand(self.deck)
+			player.in_hand = True
+			player.curr_bet = 0
+			player.all_in = False
+			player.has_acted = False
+		
 		self.pot = self.big_blind + self.small_blind
 		self.bet = self.big_blind
+		
 		self.players[self.small_blind_seat].chips -= self.small_blind
 		self.players[self.small_blind_seat].curr_bet = self.small_blind
 		utils.out('%s(%d) posts small blind of %d.' % (
@@ -135,19 +136,19 @@ class Deal:
 				winner.name, winner.chips, self.pot), self.debug_level)
 		#Hand went to showdown
 		else:
+			#Pay out pot in order of the best hand.
 			while self.pot > 0:
 				#To do: handle ties
 				winner = players_by_rank.pop()
-				winnings = winner.sidepot if winner.sidepot else self.pot
+				winnings = winner.sidepot if winner.sidepot is not None else self.pot
 				self.pot -= winnings
 				winner.chips += winnings
 				#Remove this sidepot value from other players' sidepots
 				for player in self.players:
-					if player.in_hand:
-						if player.sidepot:
-							player.sidepot -= winnings
-							if player.sidepot < 0:
-								player.sidepot = 0
+					if player.in_hand and player.sidepot:
+						player.sidepot -= winnings
+						if player.sidepot < 0:
+							player.sidepot = 0
 				utils.out("%s(%d) wins %d chips with %s" % (
 					winner.name, winner.chips, winnings, winner.hand.read_out()), self.debug_level)
 	
@@ -179,11 +180,10 @@ class Deal:
 						self.clean_up(winning_seat = i)
 				return True
 			if self.num_active_players_in_hand > 0:
-                		seat_to_act = self.get_next_seat(seat_to_act)	
-		for player in self.players:
-			if player.in_hand:
-				if player.all_in and not player.sidepot:
-					self.update_player_with_sidepot(player)
+                		seat_to_act = self.get_next_seat(seat_to_act)
+
+		self.update_players_with_sidepots()
+
 		#If at least all but one player in the hand is all in, run the remaining
 		#communal cards and go to showdown.
 		if len([player for player in self.players if player.all_in]) >= self.num_players_in_hand - 1:
@@ -191,6 +191,30 @@ class Deal:
 			self.clean_up(players_by_rank = self.get_players_by_rank())
 			return True
 		return False
+
+	def update_players_with_sidepots(self):
+		for player in self.players:
+			if player.in_hand:
+				if player.all_in and not player.sidepot:
+					player.sidepot = self.get_sidepot(player)
+	
+	#Calculates the sidepot for a player as follows. For each other player in the hand,
+	#add chips equal to that player's bet, or the given player's bet, whichever is
+	#smaller. Then add the pot before the round started.
+	def get_sidepot(self, player):
+		bets_this_round = sum(player.curr_bet for player in self.players if player.in_hand)
+		pot_before_bet = self.pot - bets_this_round
+		sidepot = pot_before_bet + player.curr_bet
+		for other in self.players:
+			#To do: players cannot have the same name
+			if other.name != player.name:
+				if other.curr_bet < player.curr_bet:
+					sidepot += other.curr_bet
+				else:
+					sidepot += player.curr_bet
+		utils.out('%s has a sidepot of %d' % (player.name, sidepot), self.debug_level)
+		return sidepot
+
 	
 	def update_player_with_check(self, player):
 		utils.out('%s(%d) checks.' % (player.name, player.chips), self.debug_level)
@@ -234,23 +258,6 @@ class Deal:
 		utils.out('%s(%d) folds.' % (
 			player.name, player.chips), self.debug_level)
 	
-	#Calculates the sidepot for a player as follows. For each other player in the hand,
-	#add chips equal to that player's bet, or the given player's bet, whichever is
-	#smaller. Then add the pot before the round started.
-	def update_player_with_sidepot(self, player):
-		bets_this_round = sum(player.curr_bet for player in self.players if player.in_hand)
-		pot_before_bet = self.pot - bets_this_round
-		player.sidepot = pot_before_bet + player.curr_bet
-		for curr_player in self.players:
-			#To do: players cannot have the same name
-			if curr_player.name != player.name:
-				if curr_player.curr_bet < player.curr_bet:
-					player.sidepot += curr_player.curr_bet
-				else:
-					player.sidepot += player.curr_bet
-		utils.out('%s has a sidepot of %d' % (player.name, player.sidepot), self.debug_level)
-		return player
-
 	#The action parameter stores as first index the name of the action, and as an optional
 	#second index the size of the bet or raise.
 	def update_player_with_action(self, seat, action):

@@ -63,7 +63,7 @@ class Player:
 		self.hand = None
 		self.rank = None
 		self.has_acted = False
-		self.in_hand = False
+		self.in_hand = True
 		self.all_in = False
 		self.curr_bet = 0
 		self.sidepot = None
