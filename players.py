@@ -58,4 +58,4 @@ class RandomPlayer(Player):
                 if action == 'check':
                         return ['check']
                 else:
-                        return ['raise', self.get_raise_increase(deal)]
+                        return ['raise', self.get_random_raise_increase(deal)]

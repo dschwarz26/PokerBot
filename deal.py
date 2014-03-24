@@ -99,7 +99,7 @@ class Deal:
 		utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
 		if self.play_all_actions(self.small_blind_seat):
 			return
-		self.clean_up(winners=self.get_winners())
+		self.clean_up(players_by_rank=self.get_players_by_rank())
 	
 	def clean_up_betting_round(self):
 		self.update_players_with_sidepots()
