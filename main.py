@@ -39,7 +39,7 @@ if __name__ == '__main__':
 		{'name': 'AllInGuy', 'type': players.AllInPlayer},
 		{'name': 'CallGuy', 'type': players.CallPlayer}
 	]
-	game = Game(people, 1000, num_orbits = 1000, debug_level = 0)
+	game = Game(people, 1000, num_orbits = 100000, debug_level = 0)
 	game.play_game()
 	print ('Final stats:')
 	for i, player in enumerate(game.players):

@@ -117,7 +117,7 @@ def get_rank_for_straight_flush(cards_by_suit, suit_with_max_number):
 def get_rank_for_quads(cards_by_number):
 	for x in cards_by_number:
 		if cards_by_number[x] == 4:
-			kicker = max(y for y in cards_by_number.keys() if cards_by_number[y] == 1)
+			kicker = max(y for y in cards_by_number.keys() if y != x)
 			return Rank('quads', [x, kicker])
 	 		
 def get_rank_for_full_house(cards_by_number):
