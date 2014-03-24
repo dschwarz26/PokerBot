@@ -4,7 +4,7 @@ import utils
 
 class Game:
 	def __init__(self, player_names, stack_size, debug_level=1, num_orbits=1):
-		self.round_number = 0
+		self.round_number = 1
 		self.players = []
 		self.num_orbits = num_orbits
 		self.debug_level = debug_level
@@ -15,11 +15,11 @@ class Game:
 	def play_game(self):
 		dealer_seat = 0
 		for _ in range(self.num_orbits):
-			self.display_player_stats()
 			for i, player in enumerate(self.players):
 				if player.chips == 0:
 					player.chips = 1000
 					self.rebuys[i] += 1
+			self.display_player_stats()
 			d = deal.Deal(self.players, dealer_seat=dealer_seat, debug_level=self.debug_level)
 			d.play_round()
 			dealer_seat = (dealer_seat + 1) % len(self.players)

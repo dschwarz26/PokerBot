@@ -9,12 +9,14 @@ class Deal:
 		self.deck = Deck()
 		self.small_blind = small_blind
 		self.big_blind = big_blind
-		self.small_blind_seat = self.get_next_seat(dealer_seat)
 		self.pot = 0
 		self.curr_raise = 0
 		self.num_players_in_hand = len(self.players)
 		self.num_active_players_in_hand = self.num_players_in_hand
 		self.communal_cards = []
+		
+		self.initiate_round(dealer_seat)
+		
 		utils.out('---------------------------------------', self.debug_level)
 		utils.out('%s(%d) is dealer.' % (self.players[dealer_seat].name, self.players[dealer_seat].chips),
 			self.debug_level)
@@ -41,17 +43,19 @@ class Deal:
 				self.num_active_players_in_hand += 1
 
 	#Initiates round by setting player variables and collecting the small and big blinds.
-	def initiate_round(self):
+	def initiate_round(self, dealer_seat):
 		for player in self.players:
 			player.draw_hand(self.deck)
 			player.in_hand = True
 			player.curr_bet = 0
 			player.all_in = False
 			player.has_acted = False
+			player.sidepot = None
 		
 		self.pot = self.big_blind + self.small_blind
 		self.bet = self.big_blind
 		
+		self.small_blind_seat = self.get_next_seat(dealer_seat)	
 		self.players[self.small_blind_seat].chips -= self.small_blind
 		self.players[self.small_blind_seat].curr_bet = self.small_blind
 		utils.out('%s(%d) posts small blind of %d.' % (
@@ -67,8 +71,6 @@ class Deal:
 			self.debug_level)
 
 	def play_round(self):
-		self.initiate_round()
-		
 		#Preflop
 		for player in self.players:
 			utils.out("%s is dealt %s" % (player.name, player.hand.read_out()), self.debug_level)
@@ -100,6 +102,7 @@ class Deal:
 		self.clean_up(winners=self.get_winners())
 	
 	def clean_up_betting_round(self):
+		self.update_players_with_sidepots()
 		for player in self.players:
 			player.curr_bet = 0
 			player.has_acted = False
@@ -182,11 +185,10 @@ class Deal:
 			if self.num_active_players_in_hand > 0:
                 		seat_to_act = self.get_next_seat(seat_to_act)
 
-		self.update_players_with_sidepots()
-
 		#If at least all but one player in the hand is all in, run the remaining
 		#communal cards and go to showdown.
 		if len([player for player in self.players if player.all_in]) >= self.num_players_in_hand - 1:
+			self.update_players_with_sidepots()
 			self.go_to_showdown()
 			self.clean_up(players_by_rank = self.get_players_by_rank())
 			return True
@@ -202,7 +204,7 @@ class Deal:
 	#add chips equal to that player's bet, or the given player's bet, whichever is
 	#smaller. Then add the pot before the round started.
 	def get_sidepot(self, player):
-		bets_this_round = sum(player.curr_bet for player in self.players if player.in_hand)
+		bets_this_round = sum(player.curr_bet for player in self.players)
 		pot_before_bet = self.pot - bets_this_round
 		sidepot = pot_before_bet + player.curr_bet
 		for other in self.players:
@@ -233,14 +235,16 @@ class Deal:
 		#Check if player is all-in
 		if amount_to_call > player.chips:
 			player.curr_bet += player.chips
-			player.chips = 0
 			self.pot += player.chips
+			utils.out('%s(0) calls for %d and is all in. Pot is %d' % (
+				player.name, player.chips, self.pot), self.debug_level)
+			player.chips = 0
 		else:
 			player.curr_bet = self.bet
 			player.chips -= amount_to_call
 			self.pot += amount_to_call
-		utils.out("%s(%d) calls for %d. Pot is %d" % (
-			player.name, player.chips, amount_to_call, self.pot), self.debug_level)
+			utils.out("%s(%d) calls for %d. Pot is %d" % (
+				player.name, player.chips, amount_to_call, self.pot), self.debug_level)
 			
 	def update_player_with_raise(self, player, raise_increase):
 		amount_to_call = self.bet - player.curr_bet
