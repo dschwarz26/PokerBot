@@ -30,7 +30,7 @@ class RandomPlayer(Player):
                  return raise_increase
  
         def get_random_bet(self, deal):
-                 min_bet = deal.big_blind
+                 min_bet = min(self.chips, deal.big_blind)
                  max_bet = self.chips
                  bet = random.randint(min_bet, max_bet)
                  return bet
