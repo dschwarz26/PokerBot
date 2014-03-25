@@ -3,6 +3,7 @@ import utils
 
 from classes import Card, Hand, Player
 from deal import Deal
+from hand_rank import Rank
 
 class DealTest(unittest.TestCase):
 	def setUp(self):
@@ -63,16 +64,19 @@ class DealTest(unittest.TestCase):
 		hands = [Hand(Card(10, 'S'), Card(10, 'H')), Hand(Card(11, 'S'), Card(11, 'H')),
 			Hand(Card(12, 'S'), Card(12, 'H'))]
 		self.set_hands(hands)
+		deal.set_player_ranks()
 		self.assertEquals([player.name for player in deal.get_players_by_rank()],
 			['Alice', 'Bob', 'Carl'])
 		hands = [Hand(Card(11, 'S'), Card(11, 'H')), Hand(Card(10, 'S'), Card(10, 'H')),
 			Hand(Card(9, 'D'), Card(9, 'H'))]
 		self.set_hands(hands)
+		deal.set_player_ranks()
 		self.assertEquals([player.name for player in deal.get_players_by_rank()],
 			['Carl', 'Bob', 'Alice'])
 		hands = [Hand(Card(8, 'S'), Card(10, 'H')), Hand(Card(8, 'H'), Card(14, 'H')),
 			Hand(Card(8, 'D'), Card(11, 'H'))]
 		self.set_hands(hands)
+		deal.set_player_ranks()
 		self.assertEquals([player.name for player in deal.get_players_by_rank()],
 			['Alice', 'Carl', 'Bob'])
 
@@ -156,6 +160,74 @@ class DealTest(unittest.TestCase):
 		self.assertEquals(deal.players[2].chips,
 			self.starting_chips - 110 - deal.big_blind)
 
+	def test_get_winners_with_highest_rank(self):
+		self.players.append(Player(4000, 'Dave'))
+		self.players.append(Player(5000, 'Elliot'))
+		deal = Deal(self.players, 1, 2, debug_level = 0)
+		deal.players[0].rank = Rank('straight', [13])
+		deal.players[1].rank = Rank('straight', [14])
+		deal.players[2].rank = Rank('straight', [10])
+		deal.players[3].rank = Rank('straight', [14])
+		deal.players[4].rank = Rank('straight', [14])
+		players_by_rank = deal.get_players_by_rank()
+		winners, players_by_rank = deal.get_winners_with_highest_rank(players_by_rank)
+		self.assertEquals(set([player.name for player in winners]),
+				  set(['Bob', 'Dave', 'Elliot']))
+		deal.players[4].rank = Rank('straight', [13])
+		deal.players[1].rank = Rank('straight', [9])
+		players_by_rank = sorted(deal.players, key = lambda x: x.rank, cmp = Rank.compare_ranks) 
+		winners, players_by_rank = deal.get_winners_with_highest_rank(players_by_rank)
+		self.assertEquals(set([player.name for player in winners]),
+				  set(['Dave']))
+		winners, players_by_rank = deal.get_winners_with_highest_rank(players_by_rank)
+		self.assertEquals(set([player.name for player in winners]),
+				  set(['Alice', 'Elliot']))
+		winners, players_by_rank = deal.get_winners_with_highest_rank(players_by_rank)
+		self.assertEquals(set([player.name for player in winners]),
+				  set(['Carl']))
+		winners, players_by_rank = deal.get_winners_with_highest_rank(players_by_rank)
+		self.assertEquals(set([player.name for player in winners]),
+				  set(['Bob']))
+
+	def test_divide_sidepots_among_winners(self):		
+		deal = Deal(self.players, 1, 2, debug_level = 0)
+		winners = [self.players[0], self.players[1], self.players[2]]
+		deal.pot = 10000
+		deal.players[0].sidepot = 300
+		deal.players[1].sidepot = 1200
+		deal.players[0].chips = 1000
+		deal.players[1].chips = 1000
+		deal.players[2].chips = 1000
+		winners = deal.divide_sidepots_among_winners(winners)
+		self.assertEqual(winners, [deal.players[2]])
+		self.assertEqual(deal.players[0].chips, 1100)
+		self.assertEqual(deal.players[1].chips, 1550)
+		self.assertEqual(deal.players[2].chips, 1550)
+
+	def test_clean_up(self):
+		self.players.append(Player(1000, 'Dave'))
+		self.players.append(Player(1000, 'Elliot'))
+		deal = Deal(self.players, 1, 2, debug_level = 0)			
+		deal.players[1].chips = 1000
+		deal.players[2].chips = 1000
+		deal.pot = 5000
+		deal.players[0].sidepot = 60
+		deal.players[1].sidepot = 120
+		deal.players[2].sidepot = 300
+		deal.players[3].sidepot = 580
+		deal.players[0].rank = Rank('straight', [14])
+		deal.players[1].rank = Rank('straight', [14])
+		deal.players[2].rank = Rank('straight', [14])
+		deal.players[3].rank = Rank('straight', [13])
+		deal.players[4].rank = Rank('straight', [13])
+		deal.clean_up(players_by_rank = deal.get_players_by_rank())
+		self.assertEquals(deal.players[0].chips, 1000 + 20)
+		self.assertEquals(deal.players[1].chips, 1000 + 20 + 30)
+		self.assertEquals(deal.players[2].chips, 1000 + 20 + 30 + 180)
+		self.assertEquals(deal.players[3].chips, 1000 + 140)
+		remaining_chips = 9000 - sum([player.chips for i, player in enumerate(deal.players) if i != 4]) 
+		self.assertEquals(deal.players[4].chips, 1000 + remaining_chips)
+
 	def test_update_player_with_sidepot(self):
 		self.players[0].chips = 10
 		self.players[1].chips = 100
@@ -207,10 +279,10 @@ class DealTest(unittest.TestCase):
 		deal.clean_up_betting_round()
 		self.assertEquals(deal.players[1].sidepot, 1000)
 		self.assertFalse(deal.players[2].sidepot)
-		deal.clean_up(players_by_rank = [
-			deal.players[2],
-			deal.players[1],
-			deal.players[0]])
+		deal.players[2].rank = Rank('pair', [2, 14, 10, 7])
+		deal.players[1].rank = Rank('pair', [2, 14, 10, 8])
+		deal.players[0].rank = Rank('pair', [2, 14, 11, 5])
+		deal.clean_up(players_by_rank = deal.get_players_by_rank())
 		self.assertEquals(deal.players[0].chips, 600)
 		self.assertEquals(deal.players[1].chips, 400)
 		self.assertEquals(deal.players[2].chips, 200)
@@ -259,10 +331,13 @@ class DealTest(unittest.TestCase):
 		deal.clean_up_betting_round()
 		self.assertEqual(deal.players[3].sidepot, 21000)
 		self.assertEqual(deal.players[4].sidepot, 23000)
-		deal.clean_up(players_by_rank = [deal.players[5],
-			deal.players[4], deal.players[0],
-			deal.players[2], deal.players[3],
-			deal.players[1]])
+		deal.players[0].rank = Rank('quads', [11, 8])
+		deal.players[1].rank = Rank('quads', [11, 12])
+		deal.players[2].rank = Rank('quads', [11, 9])
+		deal.players[3].rank = Rank('quads', [11, 10])
+		deal.players[4].rank = Rank('quads', [11, 7])
+		deal.players[5].rank = Rank('quads', [11, 6])
+		deal.clean_up(players_by_rank = deal.get_players_by_rank())
 		self.assertEquals(deal.players[0].chips, 0)
 		self.assertEquals(deal.players[1].chips, 13000)
 		self.assertEquals(deal.players[2].chips, 0)	

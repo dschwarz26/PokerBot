@@ -1,47 +1,38 @@
-import players
-import deal
 import utils
+import random
 
-class Game:
-	def __init__(self, player_names, stack_size, debug_level=1, num_orbits=1):
-		self.round_number = 1
-		self.players = []
-		self.num_orbits = num_orbits
-		self.debug_level = debug_level
-		for player in player_names:
-			self.players.append(player['type'](stack_size, player['name']))
-		self.rebuys = [0 for player in self.players]
+from game import Game
+from players import *
 
-	def play_game(self):
-		dealer_seat = 0
-		for _ in range(self.num_orbits):
-			for i, player in enumerate(self.players):
-				if player.chips == 0:
-					player.chips = 1000
-					self.rebuys[i] += 1
-			self.display_player_stats()
-			d = deal.Deal(self.players, dealer_seat=dealer_seat, debug_level=self.debug_level)
-			d.play_round()
-			dealer_seat = (dealer_seat + 1) % len(self.players)
-			self.round_number += 1
+player_types = [FoldPlayer, CallPlayer, AllInPlayer, RandomPlayer, TopPairPlayer, SmallSimulationPlayer] 
+starting_chips = 200
 
-	def display_player_stats(self):
-		utils.out('Hand %d' % self.round_number, self.debug_level)
-		for player in self.players:
-			utils.out('Player %s has %d chips.' % (player.name, player.chips), self.debug_level)
+#Returns a random set of players of size table_size
+def get_players(table_size):
+	players = []
+	for i in range(table_size):
+		player_type = random.choice(player_types)
+		#Give each player a unique name.
+		name = player_type.__name__ + str(i)
+		player = player_type(starting_chips, name)
+		players.append(player)
+	return players
 
 if __name__ == '__main__':
-	people = [
-		{'name': 'Rando1', 'type': players.RandomPlayer},
-		{'name': 'Rando2', 'type': players.RandomPlayer},
-		{'name': 'Rando3', 'type': players.RandomPlayer},
-		{'name': 'FoldoGuy', 'type': players.FoldPlayer},
-		{'name': 'AllInGuy', 'type': players.AllInPlayer},
-		{'name': 'CallGuy', 'type': players.CallPlayer}
-	]
-	game = Game(people, 1000, num_orbits = 100000, debug_level = 0)
-	game.play_game()
-	print ('Final stats:')
-	for i, player in enumerate(game.players):
-		print ('%s: %d' % (player.name, player.chips - 1000 * game.rebuys[i]))
-	print(game.rebuys)
+	results = {}
+	for name in [player.__name__ for player in player_types]:
+		results[name] = 0
+	for _ in range(100):
+		for table_size in range(3, 10):
+			players = get_players(table_size)
+			game = Game(players, stack_size = starting_chips, num_orbits = 100, debug_level = 0)
+			game.play_game()
+			for i, player in enumerate(game.players):
+				#Track the results of each player type, so discard the id after the name.
+				results[player.__name__.rstrip('1234567890')] += player.chips - starting_chips * game.rebuys[i]
+	
+	total_chips = 0
+	for name, chips in results.iteritems():
+		print 'Player type %s ends with %d' % (name, chips)
+		total_chips += chips
+	print 'Total chips: %d' % total_chips

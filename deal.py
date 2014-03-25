@@ -99,7 +99,8 @@ class Deal:
 		utils.out("River: %s" % self.communal_cards[4].read_out(), self.debug_level)
 		if self.play_all_actions(self.small_blind_seat):
 			return
-		self.clean_up(players_by_rank=self.get_players_by_rank())
+		self.set_player_ranks()
+		self.clean_up(players_by_rank = self.get_players_by_rank())
 	
 	def clean_up_betting_round(self):
 		self.update_players_with_sidepots()
@@ -111,8 +112,7 @@ class Deal:
 		self.num_active_players_in_hand = len(
 			[player for player in self.players if player.in_hand and not player.all_in])
 
-	def get_players_by_rank(self):
-		#TO DO: make a method for iterating through the players
+	def set_player_ranks(self):
 		players_in_hand = []
 		seat = self.small_blind_seat
 		for _ in range(self.num_players_in_hand):
@@ -123,38 +123,85 @@ class Deal:
 				utils.out('%s(%s) has %s' % (self.players[seat].name,
 					self.players[seat].hand.read_out(), self.players[seat].rank._to_string()), self.debug_level)
 			seat = self.get_next_seat(seat, require_active = False)
-		
-		players_by_rank = sorted(players_in_hand, key = lambda x: x.rank, cmp = hand_rank.Rank.compare_ranks)
-		return players_by_rank
 
+	def get_players_by_rank(self):
+		return sorted([player for player in self.players if player.in_hand],
+			      key = lambda x: x.rank,
+			      cmp = hand_rank.Rank.compare_ranks)
+
+	def get_winners_with_highest_rank(self, players_by_rank):
+		winners = []
+		winner = players_by_rank.pop()
+		winners.append(winner)
+		while len(players_by_rank) > 0:
+			if players_by_rank[-1].rank.equals(winner.rank):
+				winners.append(players_by_rank.pop())
+			else:
+				break
+		return winners, players_by_rank
+
+	def pay_winnings(self, winnings, winners):
+		for i, winner in enumerate(winners):
+			#Pay remainder to the first winner
+			if i == 0:
+				remainder = winnings % len(winners)
+				winner.chips += remainder
+				self.pot -= remainder
+				utils.out('%s(%d) wins remainder of %d' % (winner.name, winner.chips,
+					remainder), self.debug_level)
+
+			winner.chips += winnings / len(winners)
+			utils.out('%s(%d) wins %d chips with %s' % (winner.name, winner.chips,
+				winnings, winner.hand.read_out()), self.debug_level)
+			self.pot -= winnings / len(winners)
+		return winners
+
+	#While there is at least one winner with a sidepot, divide the minimum
+	#sidepot among the winners and remove that winner from the list.
+	def divide_sidepots_among_winners(self, winners):
+		while any([winner.sidepot != None for winner in winners]):
+			#Get the player with the smallest sidepot
+			smallest_winner = min([w for w in winners if w.sidepot != None], key = lambda x: x.sidepot)
+			
+			#Distribute that player's sidepot among the winners
+			winners = self.pay_winnings(smallest_winner.sidepot, winners)		
+			
+			#Subtract that sidepot value from other players' sidepots
+			for player in self.players:
+				if player.in_hand and player.sidepot != None and player != smallest_winner:
+					player.sidepot -= smallest_winner.sidepot
+					if player.sidepot < 0:
+						player.sidepot = 0
+			
+			#Remove that player from the list of winners
+			winners.remove(smallest_winner)
+	
+		return winners
+				
 	# If the hand went to showdown, show the winning cards and pay out the pot. If
 	# not, the pot goes to the last remaining player in the hand.
 	def clean_up(self, players_by_rank=None, winning_seat=None):
-		#Hand did not go to showdown
-		#winning_seat may be 0
+		#If the hand did not go to showdown, pay the entire pot to the remaining player.
 		if winning_seat is not None:
 			winner = self.players[winning_seat]
 			winner.chips += self.pot
 			utils.out("%s(%d) wins the pot of %d" % (
 				winner.name, winner.chips, self.pot), self.debug_level)
-		#Hand went to showdown
+		
+		#Otherwise, pay the pot to the winners in order of their hands, taking into account
+		#sidepots and split pots.
 		else:
-			#Pay out pot in order of the best hand.
 			while self.pot > 0:
-				#To do: handle ties
-				winner = players_by_rank.pop()
-				winnings = winner.sidepot if winner.sidepot is not None else self.pot
-				self.pot -= winnings
-				winner.chips += winnings
-				#Remove this sidepot value from other players' sidepots
-				for player in self.players:
-					if player.in_hand and player.sidepot:
-						player.sidepot -= winnings
-						if player.sidepot < 0:
-							player.sidepot = 0
-				utils.out("%s(%d) wins %d chips with %s" % (
-					winner.name, winner.chips, winnings, winner.hand.read_out()), self.debug_level)
-	
+				#Get the set of winners with the highest rank
+				winners, players_by_rank = self.get_winners_with_highest_rank(players_by_rank)
+				
+				#Pay out the winners with the highest rank that have sidepots.
+				winners = self.divide_sidepots_among_winners(winners)			
+				
+				#If at least one winner did not have a sidepot, pay the remaining pot.
+				if len(winners) > 0:
+					winners = self.pay_winnings(self.pot, winners)
+					
 	def go_to_showdown(self):
 		num_cards = len(self.communal_cards)
 		self.communal_cards += self.deck.draw(num_cards = 5 - num_cards)
@@ -190,6 +237,7 @@ class Deal:
 		if len([player for player in self.players if player.all_in]) >= self.num_players_in_hand - 1:
 			self.update_players_with_sidepots()
 			self.go_to_showdown()
+			self.set_player_ranks()
 			self.clean_up(players_by_rank = self.get_players_by_rank())
 			return True
 		return False

@@ -1,17 +1,25 @@
 from classes import Player
 import random
+import simulation
 
 #FoldPlayer folds at the first opportunity.
 class FoldPlayer(Player):
+	__name__ = 'FoldPlayer'
+
 	def get_action(self, deal):
 		return ['fold']
+
 #AllInPlayer goes all in at the first opportunity.
 class AllInPlayer(Player):
+	__name__ = 'AllInPlayer'
+
 	def get_action(self, deal):
-		return ['raise', self.chips - deal.bet + self.curr_bet]	
+		return ['raise', self.chips - deal.bet + self.curr_bet]
 
 #CallPlayer always calls, or checks if there is no bet.
 class CallPlayer(Player):
+	__name__ = 'CallPlayer'
+
 	def get_action(self, deal):
 		if deal.bet == 0:
 			return ['check']
@@ -20,6 +28,8 @@ class CallPlayer(Player):
 #RandomPlayer picks a random valid action at each bet. If that action
 #is a bet or raise, RandomPlayer picks a random valid bet/raise amount.
 class RandomPlayer(Player):
+	__name__ = 'RandomPlayer'
+
 	def get_random_raise_increase(self, deal):
                  amount_to_call = deal.bet - self.curr_bet
                  max_raise_increase = self.chips - amount_to_call
@@ -59,3 +69,35 @@ class RandomPlayer(Player):
                         return ['check']
                 else:
                         return ['raise', self.get_random_raise_increase(deal)]
+
+#TopPairPlayer goes all in when holding a pair of 10s or higher, and otherwise folds.
+class TopPairPlayer(Player):
+	__name__ = 'TopPairPlayer'
+
+	def get_action(self, deal):
+		if (self.hand.card_one.value in [10, 11, 12, 13, 14] and
+			self.hand.card_two.value == self.hand.card_one.value):
+			return ['raise', self.chips - deal.bet + self.curr_bet]
+		else:
+			return ['fold']
+
+#SmallSimulationPlayer does small simulations of hand outcomes to determine actions.
+class SmallSimulationPlayer(Player):
+	__name__ = 'SmallSimulationPlayer'
+
+	def get_action(self, deal):
+		#If the hand is preflop, call anything.
+		if len(deal.communal_cards) == 0:
+			return ['call']
+		
+		#Otherwise, go all in if either the simulation is favorable or the player is pot committed.
+		winning_probability = simulation.simulate_hands(self.hand, deal.communal_cards, deal.deck, 100)
+		pot_to_chips = float(deal.pot) / self.chips if self.chips > 0 else 1
+		if pot_to_chips > 0.5:
+			return ['raise', self.chips - deal.bet + self.curr_bet]	
+		if winning_probability > 75:
+			return ['raise', self.chips - deal.bet + self.curr_bet]
+		else:
+			return ['fold']
+
+	
