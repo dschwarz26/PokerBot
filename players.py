@@ -70,20 +70,35 @@ class RandomPlayer(Player):
                 else:
                         return ['raise', self.get_random_raise_increase(deal)]
 
-#TopPairPlayer goes all in when holding a pair of 10s or higher, and otherwise folds.
-class TopPairPlayer(Player):
-	__name__ = 'TopPairPlayer'
-
+#TAGPlayer goes all in when holding a pair of Js or higher or AK, and otherwise folds.
+class TAGPlayer(Player):
+	__name__ = 'TAGPlayer'
+	pairs_to_play = [11, 12, 13, 14]
+	high_cards_to_play = [13, 14]
 	def get_action(self, deal):
-		if (self.hand.card_one.value in [10, 11, 12, 13, 14] and
-			self.hand.card_two.value == self.hand.card_one.value):
+		if (self.hand.card_one.value in self.pairs_to_play and
+			self.hand.card_two.value == self.hand.card_one.value) or (
+			self.hand.card_one.value in self.high_cards_to_play and
+			self.hand.card_two.value in self.high_cards_to_play):
 			return ['raise', self.chips - deal.bet + self.curr_bet]
 		else:
 			return ['fold']
 
+class LooseTAGPlayer(TAGPlayer):
+	__name__ = 'LooseTAGPlayer'
+	pairs_to_play = [8, 9, 10, 11, 12, 13, 14]
+	high_cards_to_play = [11, 12, 13, 14]
+
+class TightTAGPlayer(TAGPlayer):
+	__name__ = 'TightTAGPlayer'
+	pairs_to_play = [13, 14]
+	high_cards_to_play = [13, 14]
+
 #SmallSimulationPlayer does small simulations of hand outcomes to determine actions.
-class SmallSimulationPlayer(Player):
-	__name__ = 'SmallSimulationPlayer'
+class SimulationPlayer(Player):
+	__name__ = 'SimulationPlayer'
+	simulation_depth = 50
+	safety_margin = 0.15
 
 	def get_action(self, deal):
 		#If the hand is preflop, call anything.
@@ -91,13 +106,39 @@ class SmallSimulationPlayer(Player):
 			return ['call']
 		
 		#Otherwise, go all in if either the simulation is favorable or the player is pot committed.
-		winning_probability = simulation.simulate_hands(self.hand, deal.communal_cards, deal.deck, 100)
-		pot_to_chips = float(deal.pot) / self.chips if self.chips > 0 else 1
-		if pot_to_chips > 0.5:
+		winning_hands = simulation.simulate_hands(
+			self.hand, deal.communal_cards, deal.deck, self.simulation_depth)
+		chance_to_win = float(winning_hands) / self.simulation_depth
+		pot_odds = float(self.chips) / (deal.pot + 2 * self.chips)
+		if chance_to_win > pot_odds + self.safety_margin:
 			return ['raise', self.chips - deal.bet + self.curr_bet]	
-		if winning_probability > 75:
-			return ['raise', self.chips - deal.bet + self.curr_bet]
 		else:
 			return ['fold']
 
-	
+class SmallSimulationPlayer(SimulationPlayer):
+	__name__ = 'SmallSimulationPlayer'
+	simulation_depth = 20
+
+class SmallTAGSimulationPlayer(SimulationPlayer):
+	__name__ = 'SmallTAGSimulationPlayer'
+	simulation_depth = 20
+	safety_margin = 0.3
+
+class SmallLAGSimulationPlayer(SimulationPlayer):
+	__name__ = 'SmallLAGSimulationPlayer'
+	simulation_depth = 20
+	safety_margin = 0.0
+
+class LargeSimulationPlayer(SimulationPlayer):
+	__name__ = 'LargeSimulationPlayer'
+	simulation_depth = 100
+
+class LargeTAGSimulationPlayer(SimulationPlayer):
+	__name__ = 'LargeTAGSimulationPlayer'
+	simulation_depth = 100
+	safety_margin = 0.3
+
+class LargeLAGSimulationPlayer(SimulationPlayer):
+	__name__ = 'LargeLAGSimulationPlayer'
+	simulation_dept = 100
+	safety_margin = 0.0
