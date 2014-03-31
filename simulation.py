@@ -1,9 +1,11 @@
 import classes
 import hand_rank
+import random
 
 def restore_deck(deck, drawn_cards):
 	for card in drawn_cards:
-		deck.cards.add(card)
+		deck.cards.append(card)
+	deck.shuffle()
 
 def simulate_hands(hand, communal_cards, deck, num_simulations):
 	result = 0.0

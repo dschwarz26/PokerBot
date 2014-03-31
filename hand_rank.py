@@ -175,6 +175,7 @@ def get_rank_for_high_card(cards_by_number):
 
 def get_cards_by_suit(cards):
 	cards_by_suit = {key: [] for key in classes.SUITS}
+	#cards_by_suit = {key: [card.value for card in cards if card.suit == key] for key in classes.SUITS}
 	for card in cards:
 		cards_by_suit[card.suit].append(card.value)
 	return cards_by_suit

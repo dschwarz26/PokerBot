@@ -21,9 +21,9 @@ class Deal:
 		utils.out('%s(%d) is dealer.' % (self.players[dealer_seat].name, self.players[dealer_seat].chips),
 			self.debug_level)
 	
-	def get_next_seat(self, seat, require_active=True, num_seats=1):
+	def get_next_seat(self, seat, require_active=True, num_seats=None):
 		result = seat
-		if num_seats > 1:
+		if num_seats:
 			for _ in range(num_seats):
 				seat = self.get_next_seat(seat, require_active=require_active)
 			return seat	
@@ -36,12 +36,11 @@ class Deal:
 		return seat
 		
 	def set_all_other_players_active(self, seat):
-		for _ in range(self.num_players_in_hand - 1):
-			seat = self.get_next_seat(seat, require_active = False)
-	 		if not self.players[seat].all_in and self.players[seat].has_acted:
-				self.players[seat].has_acted = False
+		for i, player in enumerate(self.players):
+			if seat != i and player.in_hand and not player.all_in and player.has_acted:
+				player.has_acted = False
 				self.num_active_players_in_hand += 1
-
+	
 	#Initiates round by setting player variables and collecting the small and big blinds.
 	def initiate_round(self, dealer_seat):
 		for player in self.players:
@@ -113,17 +112,13 @@ class Deal:
 			[player for player in self.players if player.in_hand and not player.all_in])
 
 	def set_player_ranks(self):
-		players_in_hand = []
-		seat = self.small_blind_seat
-		for _ in range(self.num_players_in_hand):
-			if self.players[seat].in_hand:
-				players_in_hand.append(self.players[seat])
-				self.players[seat].rank = hand_rank.get_rank(
-					self.players[seat].hand.read_as_list() + self.communal_cards)
-				utils.out('%s(%s) has %s' % (self.players[seat].name,
-					self.players[seat].hand.read_out(), self.players[seat].rank._to_string()), self.debug_level)
-			seat = self.get_next_seat(seat, require_active = False)
-
+		for player in self.players:
+			if player.in_hand:
+				player.rank = hand_rank.get_rank(
+					player.hand.read_as_list() + self.communal_cards)
+				utils.out('%s(%s) has %s' % (player.name,
+					player.hand.read_out(), player.rank._to_string()), self.debug_level)
+	
 	def get_players_by_rank(self):
 		return sorted([player for player in self.players if player.in_hand],
 			      key = lambda x: x.rank,

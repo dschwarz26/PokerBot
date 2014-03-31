@@ -25,10 +25,8 @@ def tally_results(results_for_player, starting_chips):
 	return results_for_player['final_chips'] - starting_chips * (
 		results_for_player['num_instances'] + results_for_player['num_rebuys'])
 
-if __name__ == '__main__':
+def run(num_iterations=1, num_orbits=1):
 	starting_chips = 200
-	num_iterations = 250
-	num_orbits = 20
 	table_sizes = range(3, 10)
 	results = {}
 	for name in [player.__name__ for player in player_types]:
@@ -52,3 +50,6 @@ if __name__ == '__main__':
 			results[name]['result'], results[name]['num_instances'], results[name]['num_rebuys'])
 		total_chips += results[name]['result']
 	print 'Total chips: %d' % total_chips
+
+if __name__ == '__main__':
+	run()

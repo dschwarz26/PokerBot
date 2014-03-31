@@ -38,23 +38,18 @@ class Hand:
 
 class Deck:
 	def __init__(self):
-		self.cards = set()
-		for value in VALUES:
-			for suit in SUITS:
-				self.cards.add(Card(value, suit))
+		self.cards = [Card(value, suit) for value in VALUES for suit in SUITS]
+		random.shuffle(self.cards)
 
 	def draw(self, num_cards=1):
 		try:
-			cards = random.sample(self.cards, num_cards)
-			for card in cards:
-				self.cards.remove(card)
-			return cards
-		except ValueError:
+			return [self.cards.pop() for _ in range(num_cards)]
+		except IndexError:
 			print("Drew too many cards.")
 			return []
 
 	def shuffle(self):
-		self.__init__()
+		random.shuffle(self.cards)
 
 class Player:
 	def __init__(self, chips, name):
