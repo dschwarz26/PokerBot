@@ -1,8 +1,8 @@
 import unittest
 
-from test_hand_rank import *
-from test_deal import *
-from test_classes import *
+from tests.test_hand_rank import *
+from tests.test_deal import *
+from tests.test_classes import *
 
 if __name__ == '__main__':
 	suite = unittest.TestSuite([
