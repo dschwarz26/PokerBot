@@ -1,4 +1,4 @@
-import classes
+from game import classes
 import unittest
 
 class DeckTest(unittest.TestCase):

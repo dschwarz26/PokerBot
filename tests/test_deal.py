@@ -1,9 +1,9 @@
 import unittest
-import utils
+from game import utils
 
-from classes import Card, Hand, Player
-from deal import Deal
-from hand_rank import Rank
+from game.classes import Card, Hand, Player
+from game.deal import Deal
+from game.hand_rank import Rank
 
 class DealTest(unittest.TestCase):
 	def setUp(self):

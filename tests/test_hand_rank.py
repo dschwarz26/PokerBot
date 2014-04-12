@@ -1,7 +1,6 @@
 import unittest
-import hand_rank
-
-from classes import Card
+from game import hand_rank
+from game.classes import Card
 
 hands = [
 		{'expected': 
