@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+{% autoescape true %}
+<html>
+	<body>
+    {% for player, result in results.iteritems() %}
+      <b>{{player}} ends with {{result.result}}</b>
+      Num instances: {{result.num_instances}}
+      Num rebuys: {{result.num_rebuys}}
+    {% endfor %}
+  </body>
+</html>
+{% endautoescape %}

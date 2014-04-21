@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 {% autoescape true %}
 <html>
-	<body>
-  		{{hi}}
-		 <form action="/sign" method="post">
-      			<div><textarea name="content" rows="3" cols="60"></textarea></div>
-    			<div><input type="submit" value="Sign Guestbook"></div>
-    		</form>
-	</body>
+  <body>
+      {{hi}}
+     <form action="/results" method="post">
+          Number of Tables:<div><textarea name="numTables" rows="1" cols="60"></textarea></div>
+          Number of Orbits:<div><textarea name="numOrbits" rows="1" cols="60"></textarea></div>
+      <div><input type='checkbox' name='player' value='fill in this template'></div>
+      <div><input type="submit" value="Run Simulation"></div>
+        </form>
+  </body>
 </html>
 {% endautoescape %}
 
