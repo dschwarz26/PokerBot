@@ -4,16 +4,27 @@ import random
 from game import Game
 from players import *
 
-player_types = [RandomPlayer, RandomPlayer, RandomPlayer, RandomPlayer, RandomPlayer, RandomPlayer,
+player_types = [RandomPlayer,
   SmallSimulationPlayer, SmallTAGSimulationPlayer, SmallLAGSimulationPlayer,
   LargeSimulationPlayer, LargeTAGSimulationPlayer, LargeLAGSimulationPlayer,
   TAGPlayer, TightTAGPlayer, LooseTAGPlayer] 
 
 #Returns a random set of players of size table_size
-def get_players(table_size, starting_chips, results):
+def get_players(table_size, starting_chips, results, player_prefs):
   players = []
   for i in range(table_size):
-    player_type = random.choice(player_types)
+    players_in_prefs = [pt for pt in player_prefs.keys() if player_prefs[pt]['chosen']]
+    player_type = None
+    pivot = random.uniform(0, 1)
+    increment = 0
+    for player, prefs in player_prefs.iteritems():
+      if prefs['chosen']:
+        increment += prefs['percent'] / 100.0
+        if increment > pivot:
+          player_type = player
+    if not player_type:
+      player_type = player_prefs.keys()[0]
+    #player_type = random.choice(players_in_prefs)
     #Give each player a unique name.
     name = player_type.__name__ + str(i)
     player = player_type(starting_chips, name)
@@ -25,7 +36,7 @@ def tally_results(results_for_player, starting_chips):
   return results_for_player['final_chips'] - starting_chips * (
     results_for_player['num_instances'] + results_for_player['num_rebuys'])
 
-def run(num_iterations=1, num_orbits=1):
+def run(num_iterations, num_orbits, player_prefs):
   starting_chips = 200
   table_sizes = range(3, 10)
   results = {}
@@ -33,7 +44,7 @@ def run(num_iterations=1, num_orbits=1):
     results[name] = {'final_chips': 0, 'num_instances': 0, 'num_rebuys': 0, 'result': 0}
   for _ in range(num_iterations):
     for table_size in table_sizes:
-      players, results = get_players(table_size, starting_chips, results)
+      players, results = get_players(table_size, starting_chips, results, player_prefs)
       game = Game(players, stack_size = starting_chips, num_orbits = num_orbits, debug_level = 0)
       game.play_game()
       for i, player in enumerate(game.players):

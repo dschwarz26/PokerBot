@@ -2,14 +2,29 @@
 {% autoescape true %}
 <html>
   <body>
-      {{hi}}
      <form action="/results" method="post">
-          Number of Tables:<div><textarea name="numTables" rows="1" cols="60"></textarea></div>
-          Number of Orbits:<div><textarea name="numOrbits" rows="1" cols="60"></textarea></div>
-      <div><input type='checkbox' name='player' value='fill in this template'></div>
-      <div><input type="submit" value="Run Simulation"></div>
-        </form>
+          Number of Tables:<div><textarea name="numTables" rows="1" cols="10"></textarea></div>
+          Number of Orbits:<div><textarea name="numOrbits" rows="1" cols="10"></textarea></div>
+       <div><br>
+          <table border="1">
+             <col width="">
+             <col width="50">
+             <col width="80">
+             <tr>
+                <td>Player Type</td>
+                <td>Include?</td>
+                <td>Percentage</td>
+            {% for player_type in player_types %}
+             <tr>
+                <td>{{player_type}}</td>
+                <td><input type='checkbox' name={{player_type}}></td>
+                <td><input type='text' name={{loop.index}} placeholder='%'></td>
+             </tr>
+            {% endfor %}
+         </table>
+       </div><br>
+       <div><input type="submit" value="Run Simulation"></div>
+     </form>
   </body>
 </html>
 {% endautoescape %}
-
